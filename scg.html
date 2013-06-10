@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>SCg-viewer test</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+				text-align:center;
+			}
+
+			#info {
+				color:#000;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+				z-index:100;
+			}
+
+		</style>
+	</head>
+	<body>
+
+
+		<script type="text/javascript" src="js/three.js"></script>
+		<script type="text/javascript" src="js/Detector.js"></script>
+		<script type="text/javascript" src="js/libs/stats.min.js"></script>
+		<script type="text/javascript" src="js/jquery/jquery-1.8.3.min.js"></script>
+		<script type="text/javascript" src="js/jquery/jquery.namespace.js"></script>
+		<script type="text/javascript" src="js/Constants.js"></script>
+		
+		<script type="text/javascript" src="scg.js"></script>
+		
+		<script type="text/javascript">
+			$(document).ready(function() {
+				var viewer = new SCg.Viewer();
+				viewer.init();
+
+				var types = [
+					sc_type_node,
+	 				sc_type_node | sc_type_const,
+	 				sc_type_node | sc_type_const | sc_type_node_material,
+	 				sc_type_node | sc_type_const | sc_type_node_abstract,
+	 				sc_type_node | sc_type_const | sc_type_node_class,
+	 				sc_type_node | sc_type_const | sc_type_node_struct,
+	 				sc_type_node | sc_type_const | sc_type_node_norole,
+	 				sc_type_node | sc_type_const | sc_type_node_role,
+	 				sc_type_node | sc_type_const | sc_type_node_tuple,
+
+	 				sc_type_node | sc_type_var,
+	 				sc_type_node | sc_type_var | sc_type_node_material,
+	 				sc_type_node | sc_type_var | sc_type_node_abstract,
+	 				sc_type_node | sc_type_var | sc_type_node_class,
+	 				sc_type_node | sc_type_var | sc_type_node_struct,
+	 				sc_type_node | sc_type_var | sc_type_node_norole,
+	 				sc_type_node | sc_type_var | sc_type_node_role,
+	 				sc_type_node | sc_type_var | sc_type_node_tuple
+				];
+
+				for (var i = 0; i < 1000; i++)
+				{
+					var model_node = new SCg.ModelNode({ 
+											position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, -1000 * Math.random() + 500), 
+											scale: new THREE.Vector2(32, 32),
+											sc_type: types[Math.floor((Math.random() * types.length))]
+											});
+					viewer.scene.appendNode(model_node);
+				}
+			});
+		</script>
+	</body>
+</html>
