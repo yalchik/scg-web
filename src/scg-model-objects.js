@@ -10,6 +10,7 @@ var SCgObjectState = {
      * 
      * @param {Object} options
      * Initial options of object. There are possible options:
+     * - observer - object, that observe this
      * - position - object position. SCg.Vector3 object
      * - scale - object size. SCg.Vector2 object.
      * - sc_type - object type. See sc-types for more info.
@@ -17,6 +18,7 @@ var SCgObjectState = {
 SCg.ModelObject = function(options) {
 	
 	this.need_observer_sync = true;
+	this.observer = options.observer;	// observer (render object)
 
 	if (options.position) {
 		this.position = options.position;
@@ -35,6 +37,8 @@ SCg.ModelObject = function(options) {
 	} else {
 		this.sc_type = sc_type_node;
 	}
+
+	this.edges = [];	// list of connected edges
 };
 
 SCg.ModelObject.prototype = {
@@ -42,6 +46,42 @@ SCg.ModelObject.prototype = {
 	constructor: SCg.ModelObject
 
 };
+
+/**
+ * Setup new position of object
+ * @param {SCg.Vector3} pos
+ *		New position of object
+ */
+SCg.ModelObject.prototype.setPosition = function(pos) {
+	this.position = pos;
+	this.need_observer_sync = true;
+
+	this.notifyEdgesSync();
+};
+
+/**
+ * Setup new scale of object
+ * @param {SCg.Vector2} scale
+ *		New scale of object
+ */
+SCg.ModelObject.prototype.setScale = function(scale) {
+	this.scale = scale;
+	this.need_observer_sync = true;
+
+	this.notifyEdgesSync();
+};
+
+/**
+ * Notify all connected edges to sync
+ */
+SCg.ModelObject.prototype.notifyEdgesSync = function() {
+
+	for (var i = 0; i < this.edges.length; i++) {
+       this.edges[i].need_observer_sync = true;
+    }
+
+};
+
 
 // -------------- node ---------
 

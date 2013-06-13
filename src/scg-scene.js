@@ -34,7 +34,7 @@ SCg.Scene.prototype = {
 	 	this.nodes.push(node);
 
 	 	render_node = new SCg.RenderNode( { render: this.render, model_object: node } );
-		render_node.update();
+		render_node.sync();
 
 	 	this.render.appendRenderNode(render_node);
 	 },
