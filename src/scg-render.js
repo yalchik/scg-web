@@ -16,6 +16,7 @@ SCg.Render = function() {
 	
 	this.node_materials = {}; // map of sc-types to node materials
 	this.nodes = [];
+	this.edges = [];
 };
 
 SCg.Render.prototype = {
@@ -79,6 +80,8 @@ SCg.Render.prototype = {
 
 		requestAnimationFrame( this.animate.bind(this) );
 
+		this.updateObjects();
+
 		this.render();
 		this.stats.update();
 	},
@@ -99,6 +102,27 @@ SCg.Render.prototype = {
 	appendRenderNode: function(render_node) {
 		this.nodes.push(render_node);
 		this.scene.add(render_node.sprite);
+	},
+
+	appendRenderEdge: function(render_edge) {
+		this.edges.push(render_edge);
+		
+	},
+
+	updateObjects: function() {
+
+		// upadte nodes
+		for (var i = 0; i < this.nodes.length; ++i) {
+			var node = this.nodes[i];
+			node.sync();
+		}
+
+		// now iterate all edges and fill geometry buffer
+		for (var i = 0; i < this.edges.length; ++i) {
+			var edge = this.edges[i];
+			edge.sync();
+		}
+
 	},
 
 	// -------------- Materials ------------------

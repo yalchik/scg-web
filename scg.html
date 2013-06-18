@@ -64,14 +64,29 @@
 	 				sc_type_node | sc_type_var | sc_type_node_tuple
 				];
 
-				for (var i = 0; i < 1000; i++)
+				nodes = [];
+				for (var i = 0; i < 200; i++)
 				{
 					var model_node = new SCg.ModelNode({ 
-											position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, -1000 * Math.random() + 500), 
-											scale: new THREE.Vector2(32, 32),
-											sc_type: types[Math.floor((Math.random() * types.length))]
-											});
+						position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, -1000 * Math.random() + 500), 
+						scale: new THREE.Vector2(32, 32),
+						sc_type: types[Math.floor((Math.random() * types.length))]
+					});
 					viewer.scene.appendNode(model_node);
+
+					nodes.push(model_node);
+				}
+
+				for (var i = 0; i < 100; i++)
+				{
+					var model_edge = new SCg.ModelEdge({
+						begin: nodes[Math.floor((Math.random() * nodes.length))],
+						end: nodes[Math.floor((Math.random() * nodes.length))],
+						sc_type: sc_type_arc_access | sc_type_arc_perm | sc_type_arc_neg | sc_type_const
+					});
+
+					viewer.scene.appendEdge(model_edge);
+
 				}
 			});
 		</script>

@@ -38,7 +38,14 @@ SCg.ModelObject = function(options) {
 		this.sc_type = sc_type_node;
 	}
 
+	if (options.sc_addr) {
+		this.sc_addr = options.sc_addr;
+	} else {
+		this.sc_addr = null;
+	}
+
 	this.edges = [];	// list of connected edges
+	this.need_update = true;	// update flag
 };
 
 SCg.ModelObject.prototype = {
@@ -56,7 +63,8 @@ SCg.ModelObject.prototype.setPosition = function(pos) {
 	this.position = pos;
 	this.need_observer_sync = true;
 
-	this.notifyEdgesSync();
+	this.requestUpdate();
+	this.notifyEdgesUpdate();
 };
 
 /**
@@ -68,18 +76,45 @@ SCg.ModelObject.prototype.setScale = function(scale) {
 	this.scale = scale;
 	this.need_observer_sync = true;
 
-	this.notifyEdgesSync();
+	this.requestUpdate();
+	this.update();
 };
 
 /**
  * Notify all connected edges to sync
  */
-SCg.ModelObject.prototype.notifyEdgesSync = function() {
+SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
 
 	for (var i = 0; i < this.edges.length; i++) {
-       this.edges[i].need_observer_sync = true;
+       this.edges[i].need_update = true;
     }
 
+};
+
+/** Function iterate all objects, that need to be updated recursively, and 
+ * mark them for update.
+ */
+SCg.ModelObject.prototype.requestUpdate = function() {
+	this.need_update = true;
+	for (var i = 0; i < this.edges.length; ++i) {
+		this.edges[i].requestUpdate();
+	}
+};
+
+/** Updates object state.
+ */
+SCg.ModelObject.prototype.update = function() {
+
+	this.need_update = false;
+	this.need_observer_sync = true;
+
+	for (var i = 0; i < this.edges.length; ++i) {
+		var edge = this.edges[i];
+
+		if (edge.need_update) {
+			edge.update();
+		}
+	}
 };
 
 
@@ -113,10 +148,19 @@ SCg.ModelEdge = function(options) {
 	this.begin = null;
 	this.end = null;
 
+	if (options.begin)
+		this.begin = options.begin;
+	if (options.end)
+		this.end = options.end;
+
+	this.begin_pos = new THREE.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
+	this.end_pos = new THREE.Vector3(0, 0, 0); // the end position of edge in world coordinates
+
+	this.requestUpdate();
+	this.update();
 };
 
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
-
 
 /** 
  * Setup new begin object for sc.g-edge
@@ -140,3 +184,13 @@ SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
 
  	this.need_observer_sync = true;
  };
+
+ SCg.ModelEdge.prototype.update = function() {
+ 	SCg.ModelObject.prototype.update.call(this);
+
+ 	// calculate begin and end positions
+ 	this.begin_pos = this.begin.observer.getConnectionPos(this.end.position, 0);
+ 	this.end_pos = this.end.observer.getConnectionPos(this.begin.position, 0);
+
+ 	this.position.copy(this.end_pos).add(this.begin_pos).multiplyScalar(0.5);
+ }

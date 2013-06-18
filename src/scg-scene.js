@@ -2,6 +2,7 @@ SCg.Scene = function(options) {
 
 	this.render = options.render;
 	this.nodes = [];
+	this.edges = [];
 
 };
 
@@ -26,10 +27,10 @@ SCg.Scene.prototype = {
 	},
 
 	/**
-	 * Appends renderable sc.g-node
+	 * Appends new sc.g-node to scene. This function create renderable object for the last one.
  	 * @param {Object} node Node to append
 	 */
-	 appendNode: function(node) {
+	appendNode: function(node) {
 
 	 	this.nodes.push(node);
 
@@ -39,6 +40,18 @@ SCg.Scene.prototype = {
 	 	this.render.appendRenderNode(render_node);
 	 },
 
+	 /**
+	  * Appends new sc.g-edge to scene. This function create renderable object for the last one.
+	  * @param {Object} edge Adge to append
+	  */
+	 appendEdge: function(edge) {
+	 	this.edges.push(edge);
+
+	 	render_edge = new SCg.RenderEdge( {render: this.render, model_object: edge } );
+	 	render_edge.sync();
+
+	 	this.render.appendRenderEdge(render_edge);
+	 },
 
 
 	 // --------- mouse events ------------
