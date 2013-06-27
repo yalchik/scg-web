@@ -31,6 +31,7 @@ SCg.Render.prototype = {
 		var container = document.createElement( 'div' );
 		document.body.appendChild( container );
 
+		this.container = container;
 		this.windowHalfX = window.innerWidth / 2;
 		this.windowHalfY = window.innerHeight / 2;
 

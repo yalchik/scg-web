@@ -25,9 +25,10 @@
 			}
 
 		</style>
+		
+		<link href="css/scg.css" rel="stylesheet">
 	</head>
 	<body>
-
 
 		<script type="text/javascript" src="js/three.js"></script>
 		<script type="text/javascript" src="js/Detector.js"></script>
@@ -68,9 +69,10 @@
 				for (var i = 0; i < 200; i++)
 				{
 					var model_node = new SCg.ModelNode({ 
-						position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, -1000 * Math.random() + 500), 
+						position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, 1000 * Math.random() - 500), 
 						scale: new THREE.Vector2(32, 32),
-						sc_type: types[Math.floor((Math.random() * types.length))]
+						sc_type: types[Math.floor((Math.random() * types.length))],
+						text: "Object_" + i.toString()
 					});
 					viewer.scene.appendNode(model_node);
 

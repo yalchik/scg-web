@@ -14,6 +14,7 @@ var SCgObjectState = {
      * - position - object position. SCg.Vector3 object
      * - scale - object size. SCg.Vector2 object.
      * - sc_type - object type. See sc-types for more info.
+	 * - text - text identifier of object
      */
 SCg.ModelObject = function(options) {
 	
@@ -42,6 +43,12 @@ SCg.ModelObject = function(options) {
 		this.sc_addr = options.sc_addr;
 	} else {
 		this.sc_addr = null;
+	}
+	
+	if (options.text) {
+		this.text = options.text;
+	} else {
+		this.text = null;
 	}
 
 	this.edges = [];	// list of connected edges
