@@ -1,204 +1,259 @@
 
 SCg.Render = function() {
-
-	this.container	= null;
-	this.stats 		= null;
-	this.camera 	= null; 
-	this.scene 		= null;
-	this.renderer 	= null;
-	this.mouseX 	= 0;
-	this.mouseY 	= 0;
-
-	this.windowHalfX = 0;
-	this.windowHalfY = 0;
-
-	this.node_material = null;
-	
-	this.node_materials = {}; // map of sc-types to node materials
-	this.nodes = [];
-	this.edges = [];
+	this.scene = null;
 };
 
 SCg.Render.prototype = {
 
-	constructor: SCg.Render,
+	init: function(params) {
 
-
-	init: function() {
-
-		if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
-		var container = document.createElement( 'div' );
-		document.body.appendChild( container );
-
-		this.container = container;
-		this.windowHalfX = window.innerWidth / 2;
-		this.windowHalfY = window.innerHeight / 2;
-
-		this.camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 2, 2000 );
-		this.camera.position.z = 1000;
-
-		this.scene = new THREE.Scene();
-		this.scene.fog = new THREE.Fog( 0xffffff, 210, 1100 );
-
-		this.renderer = new THREE.WebGLRenderer( { clearAlpha: 1 } );
-		this.renderer.setSize( window.innerWidth, window.innerHeight );
-		this.renderer.setClearColor(new THREE.Color().setRGB( 1.0, 1.0, 1.0 ));
-		container.appendChild( this.renderer.domElement );
-
-		//
-
-		this.stats = new Stats();
-		this.stats.domElement.style.position = 'absolute';
-		this.stats.domElement.style.top = '0px';
-		container.appendChild( this.stats.domElement );
-
-		// --------- Materials -------------------
-		this.initializeMaterials();
-
-
-		window.addEventListener( 'resize', this.onWindowResize.bind(this), false );
-
-		this.animate();
+		this.d3_drawer = d3.select(params.container).append("svg:svg").attr("pointer-events", "all");//.attr("width", w).attr("height", h);
+		
+		var self = this;
+		this.d3_container = this.d3_drawer.append('svg:g')
+								.attr("class", "SCgSvg")
+								.on('mousemove', function() {
+									self.onMouseMove(this, self);
+									})
+								.on('mousedown', function() {
+									self.onMouseDown(this, self);
+									})
+								.on('mouseup', function() {
+									self.onMouseUp(this, self);
+									})
+								.on('dblclick', function() {
+									self.onMouseDoubleClick(this, self);
+									});
+		this.initMarkers();
+									
+		this.d3_container.append('svg:rect')
+						.attr("class", "SCgContainer")
+						.attr('width', parseInt(this.d3_drawer.style("width")))
+						.attr('height', parseInt(this.d3_drawer.style("height")));
+						
+						
+		this.d3_drag_line = this.d3_container.append('svg:path')
+				.attr('class', 'SCgEdge dragline hidden')
+				.attr('d', 'M0,0L0,0');
+						
+		this.d3_contours = this.d3_container.append('svg:g').selectAll('path');
+		this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
+		this.d3_nodes = this.d3_container.append('svg:g').selectAll('g');
+								
+		this.mouse_down_node = null;
+		this.object_under_mouse = null;
+		this.selected_node = null;
+		
+		
+		// ----------- test -----------
+		var self = this;
+		// init D3 force layout
+		this.force = d3.layout.force()
+			.nodes(this.scene.nodes)
+			.links(this.scene.edges)
+			.size([parseInt(this.d3_drawer.style("width")), parseInt(this.d3_drawer.style("height"))])
+			.linkDistance(190)
+			.charge(-1300)
+			.on('tick', function() {
+				self.d3_nodes.attr("transform", function(d) {
+					d.position.x = d.x; 
+					d.position.y = d.y; 
+					return 'translate(' + d.position.x + ', ' + d.position.y + ')'; 
+				});
+				self.d3_edges.select('path').attr('d', function(d) {
+					d.update();
+					return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+				});
+				
+				self.d3_contours.attr('d', function(d) {
+										var verts = [];
+										
+										for (var i = 0; i < d.childs.length; i++) {
+											var pos = d.childs[i].position;
+											verts.push([pos.x, pos.y]);
+										}
+										
+										return "M" + 
+											d3.geom.hull(verts).join("L")
+											+ "Z";
+									});
+			});
+	},
+	
+	// -------------- markers --------------------
+	initMarkers: function() {
+		// define arrow markers for graph links
+		this.d3_drawer.append('svg:defs').append('svg:marker')
+			.attr('id', 'end-arrow')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 8)
+			.attr('markerWidth', 7)
+			.attr('markerHeight', 10)
+			.attr('orient', 'auto')
+		  .append('svg:path')
+			.attr('d', 'M0,-4L10,0L0,4')
+			.attr('fill', '#000');
 
 	},
+	
+	// -------------- draw -----------------------
+	update: function() {
+	
+		var self = this;
+		
+		// update nodes visual
+		this.d3_nodes = this.d3_nodes.data(this.scene.nodes, function(d) { return d.id; });
+		
+		// add nodes that haven't visual
+		var g = this.d3_nodes.enter().append('svg:g')
+									 .attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
+		g.append('svg:circle')
+			.attr('class', 'SCgNode')
+			.attr('r', 10)
+			.on('mouseover', function(d) {
+				// enlarge target node
+				d3.select(this).attr('transform', 'scale(1.1)')
+							   .classed('SCgHighlighted', true);
+				self.object_under_mouse = d;
+			})
+			.on('mouseout', function(d) {
+				// unenlarge target node
+				d3.select(this).attr('transform', '')
+							   .classed('SCgHighlighted', false);
+				self.object_under_mouse = null;
+			})
+			.on('mousedown', function(d) {
+				if(d3.event.ctrlKey) return;
 
-	onWindowResize: function() {
+				// select node
+				self.mouse_down_node = d;
+				if (self.mouse_down_node === self.selected_node) 
+					self.selected_node = null;
+				else 
+					self.selected_node = self.mouse_down_node;
 
-		this.windowHalfX = window.innerWidth / 2;
-		this.windowHalfY = window.innerHeight / 2;
+				// reposition drag line
+				self.d3_drag_line
+					.classed('hidden', false)
+					.attr('d', 'M' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y + 'L' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y);
 
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
+				self.update();
+			})
+			.on('mouseup', function(d) {
+				
+				if (!self.mouse_down_node) return;
 
-		this.renderer.setSize( window.innerWidth, window.innerHeight );
+				// needed by FF
+				self.d3_drag_line
+					.classed('hidden', true);
+
+				// check for drag-to-self
+				mouse_up_node = d;
+				if (mouse_up_node === self.mouse_down_node) { 
+					self.mouse_down_node = null;
+					return; 
+				}
+
+				// add edge to graph
+				self.scene.createEdge(self.mouse_down_node, mouse_up_node, null);
+				self.relayout();
+			
+				self.update();
+			});
+		g.append('svg:text')
+			.attr('class', 'SCgText')
+			.attr('x', function(d) { return d.scale.x / 1.3; })
+			.attr('y', function(d) { return d.scale.y / 1.3; })
+			.text(function(d) { return d.text; });
+			
+			
+		// update edges visual
+		this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
+		
+		// add edges that haven't visual
+		g = this.d3_edges.enter().append('svg:g');
+		
+		g.append('svg:path')
+			.attr('class', 'SCgEdge')
+			.attr('d', function(d) {
+				return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+			})
+			.style('marker-end', function(d) { return d.hasArrow() ? 'url(#end-arrow)' : ''; })
+			.on('mouseover', function(d) {
+				d3.select(this).classed('SCgHighlighted', true);
+			})
+			.on('mouseout', function(d) {
+				d3.select(this).classed('SCgHighlighted', false);
+			});
+			
+			
+		// update contours visual
+		this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
+		
+		g = this.d3_contours.enter().append('svg:path')
+									.attr('d', function(d) {
+										var verts = [];
+										
+										for (var i = 0; i < d.childs.length; i++) {
+											var pos = d.childs[i].position;
+											verts.push([pos.x, pos.y]);
+										}
+										
+										return "M" + 
+											d3.geom.hull(verts).join("L")
+											+ "Z";
+									})
+									.attr('class', 'SCgContour');
+		
+		this.updatePositions();
 	},
 
-
-	// -----------------------
-
-	animate: function() {
-
-		requestAnimationFrame( this.animate.bind(this) );
-
-		this.updateObjects();
-
-		this.render();
-		this.stats.update();
+	updatePositions: function() {
+		this.d3_nodes.attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
 	},
-
-	render: function() {
-
-		var time = Date.now() * 0.00005;
-
-		this.camera.position.x += ( this.mouseX - this.camera.position.x ) * 0.05;
-		this.camera.position.y += ( - this.mouseY - this.camera.position.y ) * 0.05;
-
-		//this.camera.lookAt( this.scene.position );
-
-		this.renderer.render( this.scene, this.camera );
+	
+	relayout: function() {
+		this.force.start();
 	},
-
+		
 	// -------------- Objects --------------------
 	appendRenderNode: function(render_node) {
-		this.nodes.push(render_node);
-		this.scene.add(render_node.sprite);
+		render_node.d3_group = this.d3_container.append("svg:g");
 	},
 
 	appendRenderEdge: function(render_edge) {
-		this.edges.push(render_edge);
+		render_edge.d3_group = this.d3_container.append("g");
+	},
+
+	// --------------- Events --------------------
+	onMouseDown: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseDown(point[0], point[1]);		  
+	},
+	
+	onMouseUp: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseUp(point[0], point[1]);
+	},
+	
+	onMouseMove: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseMove(point[0], point[1]);
 		
+		if (!this.mouse_down_node) return;
+
+		// update drag line
+		this.d3_drag_line.attr('d', 'M' + this.mouse_down_node.position.x + ',' + this.mouse_down_node.position.y + 'L' + point[0] + ',' + point[1]);
 	},
-
-	updateObjects: function() {
-
-		// upadte nodes
-		for (var i = 0; i < this.nodes.length; ++i) {
-			var node = this.nodes[i];
-			node.sync();
-		}
-
-		// now iterate all edges and fill geometry buffer
-		for (var i = 0; i < this.edges.length; ++i) {
-			var edge = this.edges[i];
-			edge.sync();
-		}
-
-	},
-
-	// -------------- Materials ------------------
-
-	/** Initialize materials, that will be used to render objects
-	 */
-    initializeMaterials: function() {
-
-	 	map_empty = THREE.ImageUtils.loadTexture( "textures/sprites/empty.png" );
-
-		map_node = THREE.ImageUtils.loadTexture( "textures/sprites/node.png" );
-	 	map_node_const = THREE.ImageUtils.loadTexture( "textures/sprites/node_const.png" );
-	 	map_node_const_material = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_material.png" );
-	 	map_node_const_abstract = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_abstract.png" );
-	 	map_node_const_class = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_class.png" );
-	 	map_node_const_struct = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_struct.png" );
-	 	map_node_const_norole = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_norole.png" );
-	 	map_node_const_role = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_role.png" );
-	 	map_node_const_tuple = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_tuple.png" );
-
-	 	map_node_var = THREE.ImageUtils.loadTexture( "textures/sprites/node_var.png" );
-	 	map_node_var_material = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_material.png" );
-	 	map_node_var_abstract = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_abstract.png" );
-	 	map_node_var_class = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_class.png" );
-	 	map_node_var_struct = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_struct.png" );
-	 	map_node_var_norole = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_norole.png" );
-	 	map_node_var_role = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_role.png" );
-	 	map_node_var_tuple = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_tuple.png" );
-
-
-	 	this.node_materials[0] = this._createMaterial(map_empty);
-
-		this.node_materials[sc_type_node] = this._createMaterial(map_node);
-	 	this.node_materials[sc_type_node | sc_type_const] = this._createMaterial(map_node_const);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_material] = this._createMaterial(map_node_const_material);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_abstract] = this._createMaterial(map_node_const_abstract);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_class] = this._createMaterial(map_node_const_class);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_struct] = this._createMaterial(map_node_const_struct);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_norole] = this._createMaterial(map_node_const_norole)
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_role] = this._createMaterial(map_node_const_role);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_tuple] = this._createMaterial(map_node_const_tuple);
-
-	 	this.node_materials[sc_type_node | sc_type_var] = this._createMaterial(map_node_var);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_material] = this._createMaterial(map_node_var_material);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_abstract] = this._createMaterial(map_node_var_abstract);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_class] = this._createMaterial(map_node_var_class);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_struct] = this._createMaterial(map_node_var_struct);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_norole] = this._createMaterial(map_node_var_norole)
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_role] = this._createMaterial(map_node_var_role);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_tuple] = this._createMaterial(map_node_var_tuple);
-	 },
-
-	 /** Create material instance for a specified texture
-	  * @param {Object} texture_map Texture map object to create material
-	  * @return Returns created material instance
-	  */
-	 _createMaterial: function(texture_map) {
-	 	result = new THREE.SpriteMaterial( { map: texture_map, useScreenCoordinates: false, color: 0xffffff, fog: true, sizeAttenuation: false } );
-	 	result.color.setRGB(1.0, 0.0, 0.0);
-
-	 	return result;
-	 },
-
-	 /** Get material for a specified object type
-	  * @param {Integer} obj_type Object type
-	  * @return Returns material for a specified object type. If material doesn't exist, then return 
-	  * default
-	  */
-	 getMaterial: function(obj_type) {
-	 	var mat_map = this.node_materials;
-
-	 	if (mat_map[obj_type])
-	  		return mat_map[obj_type]
-
-	 	return this.node_materials[0];
-	 }
+	
+	onMouseDoubleClick: function(window, render) {
+		var point = d3.mouse(window);
+		
+		if (!render.object_under_mouse) {
+			render.scene.createNode(sc_type_node, new SCg.Vector3(point[0], point[1], 0), null);
+			render.update();
+//		render.relayout();
+		}	
+	}
 
 }

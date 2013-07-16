@@ -6,7 +6,7 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
-				background-color: #000000;
+				background-color: #fff;
 				margin: 0px;
 				overflow: hidden;
 				font-family:Monospace;
@@ -23,6 +23,16 @@
 				padding: 5px;
 				z-index:100;
 			}
+			
+			.scg-viewer {
+				background-color: #eee;
+				/*width: 900px;
+				height: 800px;*/
+				margin: 0 auto;
+				border-color: #ddd;
+				border-style: solid;
+				border-width: 1px;
+			}
 
 		</style>
 		
@@ -30,9 +40,7 @@
 	</head>
 	<body>
 
-		<script type="text/javascript" src="js/three.js"></script>
-		<script type="text/javascript" src="js/Detector.js"></script>
-		<script type="text/javascript" src="js/libs/stats.min.js"></script>
+		<script type="text/javascript" src="js/d3.js"></script>
 		<script type="text/javascript" src="js/jquery/jquery-1.8.3.min.js"></script>
 		<script type="text/javascript" src="js/jquery/jquery.namespace.js"></script>
 		<script type="text/javascript" src="js/Constants.js"></script>
@@ -42,7 +50,7 @@
 		<script type="text/javascript">
 			$(document).ready(function() {
 				var viewer = new SCg.Viewer();
-				viewer.init();
+				viewer.init({container: "#scg-viewer"});
 
 				var types = [
 					sc_type_node,
@@ -66,11 +74,11 @@
 				];
 
 				nodes = [];
-				for (var i = 0; i < 200; i++)
+				for (var i = 0; i < 10; i++)
 				{
 					var model_node = new SCg.ModelNode({ 
-						position: new THREE.Vector3(1000 * Math.random() - 500, 1000 * Math.random() - 500, 1000 * Math.random() - 500), 
-						scale: new THREE.Vector2(32, 32),
+						position: new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0), //1000 * Math.random() - 500), 
+						scale: new SCg.Vector2(20, 20),
 						sc_type: types[Math.floor((Math.random() * types.length))],
 						text: "Object_" + i.toString()
 					});
@@ -79,18 +87,36 @@
 					nodes.push(model_node);
 				}
 
-				for (var i = 0; i < 100; i++)
+				for (var i = 0; i < 10; i++)
 				{
+					var n1 = 0;
+					var n2 = 0;
+					while (n1 === n2) {
+						n1 = Math.floor((Math.random() * nodes.length));
+						n2 = Math.floor((Math.random() * nodes.length));
+					}
 					var model_edge = new SCg.ModelEdge({
-						begin: nodes[Math.floor((Math.random() * nodes.length))],
-						end: nodes[Math.floor((Math.random() * nodes.length))],
+						begin: nodes[n1],
+						end: nodes[n2],
 						sc_type: sc_type_arc_access | sc_type_arc_perm | sc_type_arc_neg | sc_type_const
 					});
 
 					viewer.scene.appendEdge(model_edge);
-
 				}
+				
+				// contour
+				var model_contour = new SCg.ModelContour({});
+				viewer.scene.appendContour(model_contour);
+				for (var i = 0; i < nodes.length / 4; i++)
+				{
+					model_contour.addChild(nodes[i]);
+				}
+				
+				viewer.render.update();
+				viewer.render.relayout();
 			});
 		</script>
+		
+		<div class="scg-viewer" id="scg-viewer"></div>
 	</body>
 </html>

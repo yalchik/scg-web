@@ -9,14 +9,14 @@ SCg.Viewer = function() {
 SCg.Viewer.prototype = {
 
 
-	init: function()
+	init: function(params)
 	{
 		this.render = new SCg.Render();
-		this.render.init();
-
 		this.scene = new SCg.Scene( {render: this.render } );
 		this.scene.init();
-
+		
+		this.render.scene = this.scene;
+		this.render.init(params);
 	}
 	
 };

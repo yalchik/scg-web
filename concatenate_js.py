@@ -12,7 +12,7 @@ sources = [
         'scg-model.js',
         'scg-model-objects.js',
         'scg-render.js',
-        'scg-render-objects.js',
+        #'scg-render-objects.js',
         'scg-scene.js'
         ]
 

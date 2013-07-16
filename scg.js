@@ -10,22 +10,83 @@ SCg.Viewer = function() {
 SCg.Viewer.prototype = {
 
 
-	init: function()
+	init: function(params)
 	{
 		this.render = new SCg.Render();
-		this.render.init();
-
 		this.scene = new SCg.Scene( {render: this.render } );
 		this.scene.init();
-
+		
+		this.render.scene = this.scene;
+		this.render.init(params);
 	}
 	
 };
 
 /* --- scg-math.js --- */
-SCg.Vector2 = THREE.Vector2;
-SCg.Vector3 = THREE.Vector3;
-SCg.Color = THREE.Color;
+SCg.Vector2 = function(x, y) {
+	this.x = x;
+	this.y = y;
+};
+
+SCg.Vector2.prototype = {
+	constructor: SCg.Vector2
+};
+
+
+// --------------------
+SCg.Vector3 = function(x, y, z) {
+	this.x = x;
+	this.y = y;
+	this.z = z;
+};
+
+SCg.Vector3.prototype = {
+	constructor: SCg.Vector3,
+	
+	copyFrom: function(other) {
+		this.x = other.x;
+		this.y = other.y;
+		this.z = other.z;
+		
+		return this;
+	},
+	
+	sub: function(other) {
+		this.x -= other.x;
+		this.y -= other.y;
+		this.z -= other.z;
+		
+		return this;
+	},
+	
+	add: function(other) {
+		this.x += other.x;
+		this.y += other.y;
+		this.z += other.z;
+		
+		return this;
+	},
+	
+	multiplyScalar: function(v) {
+		this.x *= v;
+		this.y *= v;
+		this.z *= v;
+		
+		return this;
+	},
+	
+	normalize: function() {
+		var l = this.length();
+		this.x /= l;
+		this.y /= l;
+		this.z /= l;
+	},
+	
+	length: function() {
+		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+	}
+};
+
 
 /* --- scg-model.js --- */
 
@@ -37,6 +98,8 @@ var SCgObjectState = {
 	Merged: 2,
 	NewInMemory: 3
 };
+
+var ObjectId = 0;
 
 /**
      * Initialize sc.g-object with specified options.
@@ -52,7 +115,6 @@ var SCgObjectState = {
 SCg.ModelObject = function(options) {
 	
 	this.need_observer_sync = true;
-	this.observer = options.observer;	// observer (render object)
 
 	if (options.position) {
 		this.position = options.position;
@@ -63,7 +125,7 @@ SCg.ModelObject = function(options) {
 	if (options.scale) {
 		this.scale = options.scale;
 	} else {
-		this.scale = new SCg.Vector2(32.0, 32.0);
+		this.scale = new SCg.Vector2(20.0, 20.0);
 	}
 
 	if (options.sc_type) {
@@ -83,6 +145,8 @@ SCg.ModelObject = function(options) {
 	} else {
 		this.text = null;
 	}
+	
+	this.id = ObjectId++;
 
 	this.edges = [];	// list of connected edges
 	this.need_update = true;	// update flag
@@ -157,6 +221,15 @@ SCg.ModelObject.prototype.update = function() {
 	}
 };
 
+/*! Calculate connector position.
+ * @param {SCg.Vector3} Position of other end of connector
+ * @param {Float} Dot position on this object.
+ * @returns Returns position of connection point (new instance of SCg.Vector3, that can be modified later)
+ */
+SCg.ModelObject.prototype.getConnectionPos = function(from, dotPos) {
+	return new SCg.Vector3(this.position.x, this.position.y, this.position.z);
+};
+
 
 // -------------- node ---------
 
@@ -173,6 +246,21 @@ SCg.ModelNode = function(options) {
 
 SCg.ModelNode.prototype = Object.create( SCg.ModelObject.prototype );
 
+SCg.ModelNode.prototype.getConnectionPos = function(from, dotPos) {
+
+	SCg.ModelObject.prototype.getConnectionPos.call(this, from, dotPos);
+
+	var radius = this.scale.x;
+	var center = this.position;
+	
+	var result = new SCg.Vector3(0, 0, 0);
+	
+	result.copyFrom(from).sub(center).normalize();
+	result.multiplyScalar(radius).add(center);
+
+	return result;
+};
+
 
 // --------------- arc -----------
 
@@ -185,16 +273,16 @@ SCg.ModelEdge = function(options) {
  	
 	SCg.ModelObject.call(this, options);
 
-	this.begin = null;
-	this.end = null;
+	this.source = null;
+	this.target = null;
 
 	if (options.begin)
-		this.begin = options.begin;
+		this.source = options.begin;
 	if (options.end)
-		this.end = options.end;
+		this.target = options.end;
 
-	this.begin_pos = new THREE.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
-	this.end_pos = new THREE.Vector3(0, 0, 0); // the end position of edge in world coordinates
+	this.source_pos = new SCg.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
+	this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
 
 	this.requestUpdate();
 	this.update();
@@ -209,7 +297,7 @@ SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
  */
 SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
 	
-	this.begin = scg_obj;
+	this.source = scg_obj;
 
 	this.need_observer_sync = true;
 };
@@ -220,7 +308,7 @@ SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
  *		sc.g-object, that will be the end of edge
  */
  SCg.ModelEdge.prototype.setEnd = function(scg_obj) {
- 	this.end = scg_obj;
+ 	this.target = scg_obj;
 
  	this.need_observer_sync = true;
  };
@@ -229,422 +317,310 @@ SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
  	SCg.ModelObject.prototype.update.call(this);
 
  	// calculate begin and end positions
- 	this.begin_pos = this.begin.observer.getConnectionPos(this.end.position, 0);
- 	this.end_pos = this.end.observer.getConnectionPos(this.begin.position, 0);
+ 	this.source_pos = this.source.getConnectionPos(this.target.position, 0);
+ 	this.target_pos = this.target.getConnectionPos(this.source.position, 0);
 
- 	this.position.copy(this.end_pos).add(this.begin_pos).multiplyScalar(0.5);
- }
+ 	this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
+ };
+ 
+ /*! Checks if this edge need to be drawen with arrow at the end
+  */
+ SCg.ModelEdge.prototype.hasArrow = function() {
+	return this.sc_type & (sc_type_arc_common | sc_type_arc_access);
+ };
+ 
+ //---------------- contour ----------------
+ /**
+ * Initialize sc.g-arc(edge) object
+ * @param {Object} options
+ * 		Initial opations of sc.g-arc. 
+ */
+SCg.ModelContour = function(options) {
+ 	
+	SCg.ModelObject.call(this, options);
+
+	this.childs = [];
+};
+
+SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
+
+/**
+ * Append new child into contour
+ * @param {SCg.ModelObject} child Child object to append
+ */
+SCg.ModelContour.prototype.addChild = function(child) {
+	this.childs.push(child);
+};
+
+/**
+ * Remove child from contour
+ * @param {SCg.ModelObject} child Child object for remove
+ */
+ SCg.ModelContour.prototype.removeChild = function(child) {
+	this.childs.remove(child);
+ };
+ 
 
 /* --- scg-render.js --- */
 
 SCg.Render = function() {
-
-	this.container	= null;
-	this.stats 		= null;
-	this.camera 	= null; 
-	this.scene 		= null;
-	this.renderer 	= null;
-	this.mouseX 	= 0;
-	this.mouseY 	= 0;
-
-	this.windowHalfX = 0;
-	this.windowHalfY = 0;
-
-	this.node_material = null;
-	
-	this.node_materials = {}; // map of sc-types to node materials
-	this.nodes = [];
-	this.edges = [];
+	this.scene = null;
 };
 
 SCg.Render.prototype = {
 
-	constructor: SCg.Render,
+	init: function(params) {
 
-
-	init: function() {
-
-		if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
-		var container = document.createElement( 'div' );
-		document.body.appendChild( container );
-
-		this.container = container;
-		this.windowHalfX = window.innerWidth / 2;
-		this.windowHalfY = window.innerHeight / 2;
-
-		this.camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 2, 2000 );
-		this.camera.position.z = 1000;
-
-		this.scene = new THREE.Scene();
-		this.scene.fog = new THREE.Fog( 0xffffff, 210, 1100 );
-
-		this.renderer = new THREE.WebGLRenderer( { clearAlpha: 1 } );
-		this.renderer.setSize( window.innerWidth, window.innerHeight );
-		this.renderer.setClearColor(new THREE.Color().setRGB( 1.0, 1.0, 1.0 ));
-		container.appendChild( this.renderer.domElement );
-
-		//
-
-		this.stats = new Stats();
-		this.stats.domElement.style.position = 'absolute';
-		this.stats.domElement.style.top = '0px';
-		container.appendChild( this.stats.domElement );
-
-		// --------- Materials -------------------
-		this.initializeMaterials();
-
-
-		window.addEventListener( 'resize', this.onWindowResize.bind(this), false );
-
-		this.animate();
+		this.d3_drawer = d3.select(params.container).append("svg:svg").attr("pointer-events", "all");//.attr("width", w).attr("height", h);
+		
+		var self = this;
+		this.d3_container = this.d3_drawer.append('svg:g')
+								.attr("class", "SCgSvg")
+								.on('mousemove', function() {
+									self.onMouseMove(this, self);
+									})
+								.on('mousedown', function() {
+									self.onMouseDown(this, self);
+									})
+								.on('mouseup', function() {
+									self.onMouseUp(this, self);
+									})
+								.on('dblclick', function() {
+									self.onMouseDoubleClick(this, self);
+									});
+		this.initMarkers();
+									
+		this.d3_container.append('svg:rect')
+						.attr("class", "SCgContainer")
+						.attr('width', parseInt(this.d3_drawer.style("width")))
+						.attr('height', parseInt(this.d3_drawer.style("height")));
+						
+						
+		this.d3_drag_line = this.d3_container.append('svg:path')
+				.attr('class', 'SCgEdge dragline hidden')
+				.attr('d', 'M0,0L0,0');
+						
+		this.d3_contours = this.d3_container.append('svg:g').selectAll('path');
+		this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
+		this.d3_nodes = this.d3_container.append('svg:g').selectAll('g');
+								
+		this.mouse_down_node = null;
+		this.object_under_mouse = null;
+		this.selected_node = null;
+		
+		
+		// ----------- test -----------
+		var self = this;
+		// init D3 force layout
+		this.force = d3.layout.force()
+			.nodes(this.scene.nodes)
+			.links(this.scene.edges)
+			.size([parseInt(this.d3_drawer.style("width")), parseInt(this.d3_drawer.style("height"))])
+			.linkDistance(190)
+			.charge(-1300)
+			.on('tick', function() {
+				self.d3_nodes.attr("transform", function(d) {
+					d.position.x = d.x; 
+					d.position.y = d.y; 
+					return 'translate(' + d.position.x + ', ' + d.position.y + ')'; 
+				});
+				self.d3_edges.select('path').attr('d', function(d) {
+					d.update();
+					return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+				});
+				
+				self.d3_contours.attr('d', function(d) {
+										var verts = [];
+										
+										for (var i = 0; i < d.childs.length; i++) {
+											var pos = d.childs[i].position;
+											verts.push([pos.x, pos.y]);
+										}
+										
+										return "M" + 
+											d3.geom.hull(verts).join("L")
+											+ "Z";
+									});
+			});
+	},
+	
+	// -------------- markers --------------------
+	initMarkers: function() {
+		// define arrow markers for graph links
+		this.d3_drawer.append('svg:defs').append('svg:marker')
+			.attr('id', 'end-arrow')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 8)
+			.attr('markerWidth', 7)
+			.attr('markerHeight', 10)
+			.attr('orient', 'auto')
+		  .append('svg:path')
+			.attr('d', 'M0,-4L10,0L0,4')
+			.attr('fill', '#000');
 
 	},
+	
+	// -------------- draw -----------------------
+	update: function() {
+	
+		var self = this;
+		
+		// update nodes visual
+		this.d3_nodes = this.d3_nodes.data(this.scene.nodes, function(d) { return d.id; });
+		
+		// add nodes that haven't visual
+		var g = this.d3_nodes.enter().append('svg:g')
+									 .attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
+		g.append('svg:circle')
+			.attr('class', 'SCgNode')
+			.attr('r', 10)
+			.on('mouseover', function(d) {
+				// enlarge target node
+				d3.select(this).attr('transform', 'scale(1.1)')
+							   .classed('SCgHighlighted', true);
+				self.object_under_mouse = d;
+			})
+			.on('mouseout', function(d) {
+				// unenlarge target node
+				d3.select(this).attr('transform', '')
+							   .classed('SCgHighlighted', false);
+				self.object_under_mouse = null;
+			})
+			.on('mousedown', function(d) {
+				if(d3.event.ctrlKey) return;
 
-	onWindowResize: function() {
+				// select node
+				self.mouse_down_node = d;
+				if (self.mouse_down_node === self.selected_node) 
+					self.selected_node = null;
+				else 
+					self.selected_node = self.mouse_down_node;
 
-		this.windowHalfX = window.innerWidth / 2;
-		this.windowHalfY = window.innerHeight / 2;
+				// reposition drag line
+				self.d3_drag_line
+					.classed('hidden', false)
+					.attr('d', 'M' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y + 'L' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y);
 
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
+				self.update();
+			})
+			.on('mouseup', function(d) {
+				
+				if (!self.mouse_down_node) return;
 
-		this.renderer.setSize( window.innerWidth, window.innerHeight );
+				// needed by FF
+				self.d3_drag_line
+					.classed('hidden', true);
+
+				// check for drag-to-self
+				mouse_up_node = d;
+				if (mouse_up_node === self.mouse_down_node) { 
+					self.mouse_down_node = null;
+					return; 
+				}
+
+				// add edge to graph
+				self.scene.createEdge(self.mouse_down_node, mouse_up_node, null);
+				self.relayout();
+			
+				self.update();
+			});
+		g.append('svg:text')
+			.attr('class', 'SCgText')
+			.attr('x', function(d) { return d.scale.x / 1.3; })
+			.attr('y', function(d) { return d.scale.y / 1.3; })
+			.text(function(d) { return d.text; });
+			
+			
+		// update edges visual
+		this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
+		
+		// add edges that haven't visual
+		g = this.d3_edges.enter().append('svg:g');
+		
+		g.append('svg:path')
+			.attr('class', 'SCgEdge')
+			.attr('d', function(d) {
+				return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+			})
+			.style('marker-end', function(d) { return d.hasArrow() ? 'url(#end-arrow)' : ''; })
+			.on('mouseover', function(d) {
+				d3.select(this).classed('SCgHighlighted', true);
+			})
+			.on('mouseout', function(d) {
+				d3.select(this).classed('SCgHighlighted', false);
+			});
+			
+			
+		// update contours visual
+		this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
+		
+		g = this.d3_contours.enter().append('svg:path')
+									.attr('d', function(d) {
+										var verts = [];
+										
+										for (var i = 0; i < d.childs.length; i++) {
+											var pos = d.childs[i].position;
+											verts.push([pos.x, pos.y]);
+										}
+										
+										return "M" + 
+											d3.geom.hull(verts).join("L")
+											+ "Z";
+									})
+									.attr('class', 'SCgContour');
+		
+		this.updatePositions();
 	},
 
-
-	// -----------------------
-
-	animate: function() {
-
-		requestAnimationFrame( this.animate.bind(this) );
-
-		this.updateObjects();
-
-		this.render();
-		this.stats.update();
+	updatePositions: function() {
+		this.d3_nodes.attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
 	},
-
-	render: function() {
-
-		var time = Date.now() * 0.00005;
-
-		this.camera.position.x += ( this.mouseX - this.camera.position.x ) * 0.05;
-		this.camera.position.y += ( - this.mouseY - this.camera.position.y ) * 0.05;
-
-		//this.camera.lookAt( this.scene.position );
-
-		this.renderer.render( this.scene, this.camera );
+	
+	relayout: function() {
+		this.force.start();
 	},
-
+		
 	// -------------- Objects --------------------
 	appendRenderNode: function(render_node) {
-		this.nodes.push(render_node);
-		this.scene.add(render_node.sprite);
+		render_node.d3_group = this.d3_container.append("svg:g");
 	},
 
 	appendRenderEdge: function(render_edge) {
-		this.edges.push(render_edge);
+		render_edge.d3_group = this.d3_container.append("g");
+	},
+
+	// --------------- Events --------------------
+	onMouseDown: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseDown(point[0], point[1]);		  
+	},
+	
+	onMouseUp: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseUp(point[0], point[1]);
+	},
+	
+	onMouseMove: function(window, render) {
+		var point = d3.mouse(window);
+		render.scene.onMouseMove(point[0], point[1]);
 		
+		if (!this.mouse_down_node) return;
+
+		// update drag line
+		this.d3_drag_line.attr('d', 'M' + this.mouse_down_node.position.x + ',' + this.mouse_down_node.position.y + 'L' + point[0] + ',' + point[1]);
 	},
-
-	updateObjects: function() {
-
-		// upadte nodes
-		for (var i = 0; i < this.nodes.length; ++i) {
-			var node = this.nodes[i];
-			node.sync();
-		}
-
-		// now iterate all edges and fill geometry buffer
-		for (var i = 0; i < this.edges.length; ++i) {
-			var edge = this.edges[i];
-			edge.sync();
-		}
-
-	},
-
-	// -------------- Materials ------------------
-
-	/** Initialize materials, that will be used to render objects
-	 */
-    initializeMaterials: function() {
-
-	 	map_empty = THREE.ImageUtils.loadTexture( "textures/sprites/empty.png" );
-
-		map_node = THREE.ImageUtils.loadTexture( "textures/sprites/node.png" );
-	 	map_node_const = THREE.ImageUtils.loadTexture( "textures/sprites/node_const.png" );
-	 	map_node_const_material = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_material.png" );
-	 	map_node_const_abstract = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_abstract.png" );
-	 	map_node_const_class = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_class.png" );
-	 	map_node_const_struct = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_struct.png" );
-	 	map_node_const_norole = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_norole.png" );
-	 	map_node_const_role = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_role.png" );
-	 	map_node_const_tuple = THREE.ImageUtils.loadTexture( "textures/sprites/node_const_tuple.png" );
-
-	 	map_node_var = THREE.ImageUtils.loadTexture( "textures/sprites/node_var.png" );
-	 	map_node_var_material = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_material.png" );
-	 	map_node_var_abstract = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_abstract.png" );
-	 	map_node_var_class = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_class.png" );
-	 	map_node_var_struct = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_struct.png" );
-	 	map_node_var_norole = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_norole.png" );
-	 	map_node_var_role = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_role.png" );
-	 	map_node_var_tuple = THREE.ImageUtils.loadTexture( "textures/sprites/node_var_tuple.png" );
-
-
-	 	this.node_materials[0] = this._createMaterial(map_empty);
-
-		this.node_materials[sc_type_node] = this._createMaterial(map_node);
-	 	this.node_materials[sc_type_node | sc_type_const] = this._createMaterial(map_node_const);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_material] = this._createMaterial(map_node_const_material);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_abstract] = this._createMaterial(map_node_const_abstract);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_class] = this._createMaterial(map_node_const_class);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_struct] = this._createMaterial(map_node_const_struct);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_norole] = this._createMaterial(map_node_const_norole)
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_role] = this._createMaterial(map_node_const_role);
-	 	this.node_materials[sc_type_node | sc_type_const | sc_type_node_tuple] = this._createMaterial(map_node_const_tuple);
-
-	 	this.node_materials[sc_type_node | sc_type_var] = this._createMaterial(map_node_var);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_material] = this._createMaterial(map_node_var_material);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_abstract] = this._createMaterial(map_node_var_abstract);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_class] = this._createMaterial(map_node_var_class);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_struct] = this._createMaterial(map_node_var_struct);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_norole] = this._createMaterial(map_node_var_norole)
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_role] = this._createMaterial(map_node_var_role);
-	 	this.node_materials[sc_type_node | sc_type_var | sc_type_node_tuple] = this._createMaterial(map_node_var_tuple);
-	 },
-
-	 /** Create material instance for a specified texture
-	  * @param {Object} texture_map Texture map object to create material
-	  * @return Returns created material instance
-	  */
-	 _createMaterial: function(texture_map) {
-	 	result = new THREE.SpriteMaterial( { map: texture_map, useScreenCoordinates: false, color: 0xffffff, fog: true, sizeAttenuation: false } );
-	 	result.color.setRGB(1.0, 0.0, 0.0);
-
-	 	return result;
-	 },
-
-	 /** Get material for a specified object type
-	  * @param {Integer} obj_type Object type
-	  * @return Returns material for a specified object type. If material doesn't exist, then return 
-	  * default
-	  */
-	 getMaterial: function(obj_type) {
-	 	var mat_map = this.node_materials;
-
-	 	if (mat_map[obj_type])
-	  		return mat_map[obj_type]
-
-	 	return this.node_materials[0];
-	 }
+	
+	onMouseDoubleClick: function(window, render) {
+		var point = d3.mouse(window);
+		
+		if (!render.object_under_mouse) {
+			render.scene.createNode(sc_type_node, new SCg.Vector3(point[0], point[1], 0), null);
+			render.update();
+//		render.relayout();
+		}	
+	}
 
 }
-
-/* --- scg-render-objects.js --- */
-SCg.RenderObject = function(params) {
-	this.model_object = params.model_object; // pointer to observed object in model
-	if (this.model_object)
-		this.model_object.observer = this;
-
-	this.render = params.render;
-};
-
-SCg.RenderObject.prototype = {
-
-	parseParams: function(params) {
-		this.model_object = params.model_object;
-		this.render = params.render;
-	}
-};
-
-/**
- * Calculate connector point
- * @param {SCg.Vector3} from
- *		Position of second point of connector from this
- * @param {Float} dotPos
- *		Dot position (relative position on this object). It depend on object type
- */
-SCg.RenderObject.prototype.getConnectionPos = function(from, dotPos) {
-	if (this.need_observer_sync)
-		this.sync();
-};
-
-var textId = 0;
-// ------------ Text ------------
-SCg.Text = function(container) {
-
-	this.id = "SCg_Text_" + textId.toString();
-	textId++;
-	
-	$(container).append('<div id="' + this.id + '" style="position: absolute;" class="SCgText"></div>');
-};
-
-SCg.Text.prototype.setValue = function(value) {
-	$("#" + this.id).text(value);
-};
-
-SCg.Text.prototype.updatePosition = function(render, pos3d) {
-	var widthHalf = render.windowHalfX, heightHalf = render.windowHalfY;
-
-	var projector = new THREE.Projector();
-	var vector = projector.projectVector( pos3d.clone(), render.camera );
-
-	vector.x = ( vector.x * widthHalf ) + widthHalf;
-	vector.y = - ( vector.y * heightHalf ) + heightHalf;
-	$("#" + this.id).css({left:Math.ceil(vector.x), top:Math.ceil(vector.y)});
-};
-
-
-// ------------ Node ------------
-
-
-SCg.RenderNode = function(params) {
-
-	SCg.RenderObject.call(this, params);
-
-	this.parseParams(params);
-
-	this.sprite = new THREE.Sprite(this.render.getMaterial(sc_type_node)); // sprite to draw node
-	this.text = new SCg.Text(this.render.container);
-};
-
-SCg.RenderNode.prototype = Object.create( SCg.RenderObject.prototype );
-
-SCg.RenderNode.prototype.sync = function() {
-
-	if (!this.model_object.need_observer_sync)
-		return; // do nothing
-
-	position = this.model_object.position;
-	scale = this.model_object.scale;
-
-	this.sprite.position.set( position.x, position.y, position.z );
-	this.sprite.scale.set( scale.x, scale.y, scale.z );
-	this.sprite.material = this.render.getMaterial(this.model_object.sc_type);
-
-	this.model_object.need_observer_sync = false;
-	
-	var textPos = new SCg.Vector3();
-	var textOffset = new SCg.Vector2();
-	textOffset.copy(scale).multiplyScalar(0.1);
-	textPos.copy(position);
-	textPos.x += textOffset.x;
-	textPos.y -= textOffset.y;
-	this.text.setValue(this.model_object.text);
-	this.text.updatePosition(this.render, textPos);
-	
-};
-
-SCg.RenderNode.prototype.getConnectionPos = function(from, dotPos) {
-
-	SCg.RenderObject.prototype.getConnectionPos.call(this, from, dotPos);
-
-	var radius = this.model_object.scale.x;
-	var center = this.model_object.position;
-	var result = new THREE.Vector3(); 
-	result.copy(center).sub(from).normalize();
-	result.multiplyScalar(radius).add(center);
-
-	return result;
-};
-
-SCg.RenderNode.prototype.parseParams = function(params) {
-	SCg.RenderObject.prototype.parseParams.call(this, params);
-
-
-};
-
-
-// ------------ Edge -------------
-
-SCg.RenderEdge = function(params) {
-
-	SCg.RenderObject.call(this, params);
-	
-	this.geometry = null;
-	this.verticies_count = 0;
-
-	this.parseParams(params);
-};
-
-SCg.RenderEdge.prototype = Object.create(SCg.RenderObject.prototype);
-
-SCg.RenderEdge.prototype.sync = function() {
-
-	if (!this.model_object.need_observer_sync)
-		return; // do nothing
-		
-	this.updateGeometry();
-
-};
-
-SCg.RenderEdge.prototype.parseParams = function(params) {
-	SCg.RenderObject.prototype.parseParams.call(this, params);
-
-};
-
-SCg.RenderEdge.prototype.hasArrow = function() {
-	if (!this.model_object)
-		return false;
-		
-	return this.model_object.sc_type & (sc_type_arc_access | sc_type_arc_common);
-};
-
-SCg.RenderEdge.prototype.updateGeometry = function() {
-	var end_dot = 0.0;
-	var beg_dot = 0.0;
-	var beg_pos = this.model_object.begin.position;
-	var end_pos = this.model_object.end.observer.getConnectionPos(beg_pos, end_dot);
-	beg_pos = this.model_object.begin.observer.getConnectionPos(end_pos, beg_dot);
-	
-	// calculate length
-	var dir = new THREE.Vector3();
-	dir.copy(end_pos).sub(beg_pos);
-	var len = dir.length();
-	
-	// calculate number of segments
-	var segments = len / 2.0; /* determine texel constant */
-	if (segments > Math.floor(segments))
-		segments = Math.floor(segments) + 1;
-		
-	if (this.hasArrow())
-		segments += 1;
-	
-	this.createBuffer(segments);
-	
-};
-
-SCg.RenderEdge.prototype.createBuffer = function(segments) {
-
-	this.geometry = new THREE.BufferGeometry();
-	this.geometry.dynamic = true;
-
-	var triangles = segments * 2;
-		
-	this.verticies_count = triangles * 3;
-	
-	this.geometry.attributes = {
-		position: {
-			itemSize: 3,
-			array: new Float32Array(this.verticies_count * 3),
-			numItems: this.verticies_count * 3
-		},
-		color: {
-			itemSize: 3,
-			array: new Float32Array(this.verticies_count * 3),
-			numItems: this.verticies_count * 3
-		},
-		uv: {
-			itemSize: 2,
-			array: new Float32Array(this.verticies_count * 2),
-			numItems: this.verticies_count * 2
-		}
-	};
-	
-	this.mesh = new THREE.Mesh( this.geometry, this.material );
-};
-
 
 /* --- scg-scene.js --- */
 SCg.Scene = function(options) {
@@ -652,7 +628,7 @@ SCg.Scene = function(options) {
 	this.render = options.render;
 	this.nodes = [];
 	this.edges = [];
-
+	this.contours = [];
 };
 
 SCg.Scene.prototype = {
@@ -662,79 +638,83 @@ SCg.Scene.prototype = {
 
 	init: function() {
 
-		// --------------- Events ----------------
-		document.addEventListener( 'mousedown', this.onMouseDown.bind(this), false );
-		document.addEventListener( 'mousemove', this.onMouseMove.bind(this), false );
-		document.addEventListener( 'mouseup', this.onMouseUp.bind(this), false);
-
-		document.addEventListener( 'touchstart', this.onTouchStart.bind(this), false );
-		document.addEventListener( 'touchmove', this.onTouchMove.bind(this), false );
-		document.addEventListener( 'touchend', this.onTouchEnd.bind(this), false);
-		document.addEventListener( 'touchcancel', this.onTouchCancel.bind(this), false);
-		document.addEventListener( 'touchleave', this.onTouchLeave.bind(this), false);
-
 	},
 
 	/**
-	 * Appends new sc.g-node to scene. This function create renderable object for the last one.
- 	 * @param {Object} node Node to append
+	 * Appends new sc.g-node to scene
+ 	 * @param {SCg.ModelNode} node Node to append
 	 */
 	appendNode: function(node) {
+		this.nodes.push(node);
+	},
 
-	 	this.nodes.push(node);
+	/**
+	 * Appends new sc.g-edge to scene
+	 * @param {SCg.ModelEdge} edge Edge to append
+	 */
+	appendEdge: function(edge) {
+		this.edges.push(edge);
+	},
+	 
+	/**
+	 * Append new sc.g-contour to scene
+	 * @param {SCg.ModelContour} contour Contour to append
+	 */
+	appendContour: function(contour) {
+		this.contours.push(contour);
+	},	
 
-	 	render_node = new SCg.RenderNode( { render: this.render, model_object: node } );
-		render_node.sync();
+	// --------- objects create/destroy -------
+	/**
+	 * Create new node
+	 * @param {Integer} sc_type Type of node
+	 * @param {SCg.Vector3} pos Position of node
+	 * @param {String} text Text assotiated with node
+	 * 
+	 * @return Returns created node
+	 */
+	createNode: function(sc_type, pos, text) {
+		var node = new SCg.ModelNode({ 
+						position: new SCg.Vector3(pos.x, pos.y, pos.z), 
+						scale: new SCg.Vector2(20, 20),
+						sc_type: sc_type,
+						text: text
+					});
+		this.appendNode(node);
+		
+		return node;
+	},
+	
+	/**
+	 * Create edge between two specified objects
+	 * @param {SCg.ModelObject} begin Begin object of edge
+	 * @param {SCg.ModelObject} end End object of edge
+	 * @param {Integer} sc_type SC-type of edge
+	 *
+	 * @return Returns created edge
+	 */
+	createEdge: function(begin, end, sc_type) {
+		var edge = new SCg.ModelEdge({
+										begin: begin,
+										end: end,
+										sc_type: sc_type ? sc_type : sc_type_edge_common
+									});
+		this.appendEdge(edge);
+		
+		return edge;
+	},
 
-	 	this.render.appendRenderNode(render_node);
+	// --------- mouse events ------------
+
+	 onMouseDown: function(x, y) {
+
 	 },
 
-	 /**
-	  * Appends new sc.g-edge to scene. This function create renderable object for the last one.
-	  * @param {Object} edge Adge to append
-	  */
-	 appendEdge: function(edge) {
-	 	this.edges.push(edge);
-
-	 	render_edge = new SCg.RenderEdge( {render: this.render, model_object: edge } );
-	 	render_edge.sync();
-
-	 	this.render.appendRenderEdge(render_edge);
-	 },
-
-
-	 // --------- mouse events ------------
-
-	 onMouseDown: function(event) {
+	 onMouseMove: function(x, y) {
 
 	 },
 
-	 onMouseMove: function(event) {
-
-	 },
-
-	 onMouseUp: function(event) {
-
-	 },
-
-	 // --------- touch events ------------
-	 onTouchStart: function(event) {
-
-	 },
-
-	 onTouchMove: function(event) {
-
-	 },
-
-	 onTouchEnd: function(event) {
-
-	 },
-
-	 onTouchCancel: function(event) {
-
-	 },
-
-	 onTouchLeave: function(event) {
+	 onMouseUp: function(x, y) {
 
 	 }
 
