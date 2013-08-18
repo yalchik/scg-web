@@ -35,6 +35,8 @@ SCg.Render.prototype = {
 		this.d3_drag_line = this.d3_container.append('svg:path')
 				.attr('class', 'SCgEdge dragline hidden')
 				.attr('d', 'M0,0L0,0');
+				
+		this.d3_contour_line = d3.svg.line().interpolate("cardinal-closed");
 						
 		this.d3_contours = this.d3_container.append('svg:g').selectAll('path');
 		this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
@@ -65,18 +67,10 @@ SCg.Render.prototype = {
 					return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
 				});
 				
-				self.d3_contours.attr('d', function(d) {
-										var verts = [];
-										
-										for (var i = 0; i < d.childs.length; i++) {
-											var pos = d.childs[i].position;
-											verts.push([pos.x, pos.y]);
-										}
-										
-										return "M" + 
-											d3.geom.hull(verts).join("L")
-											+ "Z";
-									});
+				self.d3_contours.attr('d', function(d) { 
+					d.update();
+					return self.d3_contour_line(d.verticies) + 'Z'; 
+				});
 			});
 	},
 	
@@ -191,18 +185,7 @@ SCg.Render.prototype = {
 		this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
 		
 		g = this.d3_contours.enter().append('svg:path')
-									.attr('d', function(d) {
-										var verts = [];
-										
-										for (var i = 0; i < d.childs.length; i++) {
-											var pos = d.childs[i].position;
-											verts.push([pos.x, pos.y]);
-										}
-										
-										return "M" + 
-											d3.geom.hull(verts).join("L")
-											+ "Z";
-									})
+									.attr('d', d3.svg.line().interpolate('cardinal-closed'))
 									.attr('class', 'SCgContour');
 		
 		this.updatePositions();

@@ -34,11 +34,11 @@
 }
 
 .SCgContour {
-	fill: steelblue;
-	stroke: steelblue;
-	stroke-width: 32px;
+	fill: #ddddff;
+	stroke: black;
+	stroke-width: 2px;
 	stroke-linejoin: round;
-	opacity: 0.4;
+	opacity: 0.9;
 }
 
 path.SCgEdge.dragline {

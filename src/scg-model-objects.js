@@ -246,9 +246,42 @@ SCg.ModelContour = function(options) {
 	SCg.ModelObject.call(this, options);
 
 	this.childs = [];
+	this.verticies = [];
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
+
+SCg.ModelContour.prototype.update = function() {
+
+	// http://jsfiddle.net/NNwFa/44/
+	
+	var verts = [];
+	var cx = 0;
+	var cy = 0;
+	for (var i = 0; i < this.childs.length; i++) {
+		var pos = this.childs[i].position;
+		verts.push([pos.x , pos.y]);
+		
+		cx += pos.x;
+		cy += pos.y;
+	}
+	
+	cx /= float(this.childs.length);
+	cy /= float(this.childs.length);
+	
+	var cV = new SCg.Vector2(cx, cy);
+	var pV = new SCg.Vector2(0, 0);
+	
+	for (var i = 0; i < this.verts.length; i++) {
+		var pos = this.verts[i];
+		
+		
+		cx += pos.x;
+		cy += pos.y;
+	}
+	
+	this.verticies = d3.geom.hull(verts);
+};
 
 /**
  * Append new child into contour
