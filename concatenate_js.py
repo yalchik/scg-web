@@ -13,7 +13,8 @@ sources = [
         'scg-model-objects.js',
         'scg-render.js',
         #'scg-render-objects.js',
-        'scg-scene.js'
+        'scg-scene.js',
+		'scg-component.js'
         ]
 
 def create_file(source_dir, target_file_path):
