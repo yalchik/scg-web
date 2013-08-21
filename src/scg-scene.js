@@ -4,6 +4,8 @@ SCg.Scene = function(options) {
 	this.nodes = [];
 	this.edges = [];
 	this.contours = [];
+	
+	this.objects = {};
 };
 
 SCg.Scene.prototype = {
@@ -12,7 +14,8 @@ SCg.Scene.prototype = {
 
 
 	init: function() {
-
+		this.layout_manager = new SCg.LayoutManager();
+		this.layout_manager.init(this);
 	},
 
 	/**
@@ -21,6 +24,8 @@ SCg.Scene.prototype = {
 	 */
 	appendNode: function(node) {
 		this.nodes.push(node);
+		if (node.sc_addr)
+			this.objects[node.sc_addr] = node;
 	},
 
 	/**
@@ -29,6 +34,8 @@ SCg.Scene.prototype = {
 	 */
 	appendEdge: function(edge) {
 		this.edges.push(edge);
+		if (edge.sc_addr)
+			this.objects[edge.sc_addr] = edge;
 	},
 	 
 	/**
@@ -37,6 +44,8 @@ SCg.Scene.prototype = {
 	 */
 	appendContour: function(contour) {
 		this.contours.push(contour);
+		if (contour.sc_addr)
+			this.objects[contour.sc_addr] = contour;
 	},	
 
 	// --------- objects create/destroy -------
@@ -91,7 +100,45 @@ SCg.Scene.prototype = {
 
 	 onMouseUp: function(x, y) {
 
-	 }
+	 },
 
+	 // --------- layout --------
+	 layout: function() {
+		this.layout_manager.doLayout();
+		this.render.update();
+	 },
 	 
+	 onLayoutTick: function() {
+	 
+	 },
+	 
+	 /**
+	  * Returns size of container, where graph drawing
+	  */
+	getContainerSize: function() {
+		return [parseInt(this.render.d3_drawer.style("width")), parseInt(this.render.d3_drawer.style("height"))];
+	},
+	 
+	 /**
+	  * Return array that contains sc-addrs of all objects in scene
+	  */
+	getScAddrs: function() {
+		var keys = new Array();
+		for (key in this.objects) {
+			keys.push(key);
+		}
+		return keys;
+	},
+	
+	/**
+	 * Return object by sc-addr
+	 * @param {String} addr sc-addr of object to find
+	 * @return If object founded, then return it; otherwise return null
+	 */
+	getObjectByScAddr: function(addr) {
+		if (this.objects.hasOwnProperty(addr))
+			return this.objects[addr];
+			
+		return null;
+	}
 };

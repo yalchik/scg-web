@@ -276,10 +276,10 @@ SCg.ModelEdge = function(options) {
 	this.source = null;
 	this.target = null;
 
-	if (options.begin)
-		this.source = options.begin;
-	if (options.end)
-		this.target = options.end;
+	if (options.source)
+		this.source = options.source;
+	if (options.target)
+		this.target = options.target;
 
 	this.source_pos = new SCg.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
 	this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
@@ -446,29 +446,6 @@ SCg.Render.prototype = {
 		
 		// ----------- test -----------
 		var self = this;
-		// init D3 force layout
-		this.force = d3.layout.force()
-			.nodes(this.scene.nodes)
-			.links(this.scene.edges)
-			.size([parseInt(this.d3_drawer.style("width")), parseInt(this.d3_drawer.style("height"))])
-			.linkDistance(190)
-			.charge(-1300)
-			.on('tick', function() {
-				self.d3_nodes.attr("transform", function(d) {
-					d.position.x = d.x; 
-					d.position.y = d.y; 
-					return 'translate(' + d.position.x + ', ' + d.position.y + ')'; 
-				});
-				self.d3_edges.select('path').attr('d', function(d) {
-					d.update();
-					return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
-				});
-				
-				self.d3_contours.attr('d', function(d) { 
-					d.update();
-					return self.d3_contour_line(d.verticies) + 'Z'; 
-				});
-			});
 	},
 	
 	// -------------- markers --------------------
@@ -557,7 +534,6 @@ SCg.Render.prototype = {
 			.attr('y', function(d) { return d.scale.y / 1.3; })
 			.text(function(d) { return d.text; });
 			
-			
 		// update edges visual
 		this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
 		
@@ -589,13 +565,24 @@ SCg.Render.prototype = {
 	},
 
 	updatePositions: function() {
-		this.d3_nodes.attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
+		this.d3_nodes.attr("transform", function(d) { 
+			return 'translate(' + d.position.x + ', ' + d.position.y + ')'
+		});
+		this.d3_edges.select('path').attr('d', function(d) {
+			d.update();
+			return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+		});
+				
+		this.d3_contours.attr('d', function(d) { 
+			d.update();
+			return self.d3_contour_line(d.verticies) + 'Z'; 
+		});
 	},
 	
-	relayout: function() {
-		this.force.start();
+	updateTexts: function() {
+		this.d3_nodes.select('text').text(function(d) { return d.text; });
 	},
-		
+			
 	// -------------- Objects --------------------
 	appendRenderNode: function(render_node) {
 		render_node.d3_group = this.d3_container.append("svg:g");
@@ -645,6 +632,8 @@ SCg.Scene = function(options) {
 	this.nodes = [];
 	this.edges = [];
 	this.contours = [];
+	
+	this.objects = {};
 };
 
 SCg.Scene.prototype = {
@@ -653,7 +642,8 @@ SCg.Scene.prototype = {
 
 
 	init: function() {
-
+		this.layout_manager = new SCg.LayoutManager();
+		this.layout_manager.init(this);
 	},
 
 	/**
@@ -662,6 +652,8 @@ SCg.Scene.prototype = {
 	 */
 	appendNode: function(node) {
 		this.nodes.push(node);
+		if (node.sc_addr)
+			this.objects[node.sc_addr] = node;
 	},
 
 	/**
@@ -670,6 +662,8 @@ SCg.Scene.prototype = {
 	 */
 	appendEdge: function(edge) {
 		this.edges.push(edge);
+		if (edge.sc_addr)
+			this.objects[edge.sc_addr] = edge;
 	},
 	 
 	/**
@@ -678,6 +672,8 @@ SCg.Scene.prototype = {
 	 */
 	appendContour: function(contour) {
 		this.contours.push(contour);
+		if (contour.sc_addr)
+			this.objects[contour.sc_addr] = contour;
 	},	
 
 	// --------- objects create/destroy -------
@@ -732,9 +728,47 @@ SCg.Scene.prototype = {
 
 	 onMouseUp: function(x, y) {
 
-	 }
+	 },
 
+	 // --------- layout --------
+	 layout: function() {
+		this.layout_manager.doLayout();
+		this.render.update();
+	 },
 	 
+	 onLayoutTick: function() {
+	 
+	 },
+	 
+	 /**
+	  * Returns size of container, where graph drawing
+	  */
+	getContainerSize: function() {
+		return [parseInt(this.render.d3_drawer.style("width")), parseInt(this.render.d3_drawer.style("height"))];
+	},
+	 
+	 /**
+	  * Return array that contains sc-addrs of all objects in scene
+	  */
+	getScAddrs: function() {
+		var keys = new Array();
+		for (key in this.objects) {
+			keys.push(key);
+		}
+		return keys;
+	},
+	
+	/**
+	 * Return object by sc-addr
+	 * @param {String} addr sc-addr of object to find
+	 * @return If object founded, then return it; otherwise return null
+	 */
+	getObjectByScAddr: function(addr) {
+		if (this.objects.hasOwnProperty(addr))
+			return this.objects[addr];
+			
+		return null;
+	}
 };
 
 /* --- scg-component.js --- */
@@ -804,7 +838,8 @@ scgViewerWindow.prototype = {
 				var model_node = new SCg.ModelNode({ 
 						position: new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), //1000 * Math.random() - 500), 
 						sc_type: el.el_type,
-						text: el.id
+						text: "",
+						sc_addr: el.id
 					});
 				this.viewer.scene.appendNode(model_node);
 				
@@ -831,20 +866,24 @@ scgViewerWindow.prototype = {
                     edges.splice(idx, 1);
                     
 					var model_edge = new SCg.ModelEdge({
-						begin: beginNode,
-						end: endNode,
-						sc_type: obj.el_type
+						source: beginNode,
+						target: endNode,
+						sc_type: obj.el_type,
+						sc_addr: obj.id
 					});
 
 					this.viewer.scene.appendEdge(model_edge);
 					
 					elements[obj.id] = model_edge;
-                }
+                } 
             }
         }
 		
+		if (edges.length > 0)
+			alert("error");
+		
 		this.viewer.render.update();
-		this.viewer.render.relayout();
+		this.viewer.scene.layout();
     },
 
     /**
@@ -861,12 +900,19 @@ scgViewerWindow.prototype = {
      * Emit translate identifiers
      */
     translateIdentifiers    : function(language){
-
-        /*var objects = this._getObjectsForTranslate();
-        var self = this;
-        SCWeb.core.Translation.translate(objects, language, function(namesMap) {
-            self._translateObjects(namesMap);
-        });*/
+		
+		var self = this;
+ 		
+        SCWeb.core.Translation.translate(this.viewer.scene.getScAddrs(), language, function(namesMap) {
+            for (addr in namesMap) {
+				var obj = self.viewer.scene.getObjectByScAddr(addr);
+				if (obj) {
+					obj.text = namesMap[addr];
+				}
+			}
+			
+			self.viewer.render.updateTexts();
+        });
 
     },
 
@@ -892,5 +938,188 @@ scgViewerWindow.prototype = {
 SCWeb.core.ComponentManager.appendComponentInitialize(function() {
 	SCWeb.core.ComponentManager.registerComponent(SCgComponent);
 });
+
+
+/* --- scg-layout.js --- */
+var SCgLayoutObjectType = {
+	Node: 0,
+	Edge: 1,
+	Link: 2,
+	Contour: 3,
+	DotPoint: 4
+};
+
+// Layout algorithms
+
+
+/**
+ * Base layout algorithm
+ */
+SCg.LayoutAlgorithm = function(nodes, edges, contours, onTickUpdate) {
+	this.nodes = nodes;
+	this.edges = edges;
+	this.contours = contours;
+	this.onTickUpdate = onTickUpdate;
+};
+
+SCg.LayoutAlgorithm.prototype = {
+	constructor: SCg.LayoutAlgorithm
+};
+
+// --------------------------
+
+SCg.LayoutAlgorithmForceBased = function(nodes, edges, contours, onTickUpdate, rect) {
+	SCg.LayoutAlgorithm.call(this, nodes, edges, contours, onTickUpdate);
+	this.rect = rect;
+};
+
+SCg.LayoutAlgorithmForceBased.prototype = Object.create( SCg.LayoutAlgorithm );
+
+SCg.LayoutAlgorithmForceBased.prototype.start = function() {
+	// init D3 force layout
+	var self = this;
+	this.force = d3.layout.force()
+		.nodes(this.nodes)
+		.links(this.edges)
+		.size(this.rect)
+		.linkDistance(190)
+		.charge(-1300)
+		.on('tick', function() {
+			self.onLayoutTick();
+		})
+		.start();
+};
+
+SCg.LayoutAlgorithmForceBased.prototype.onLayoutTick = function() {
+	
+	var dots = [];
+	for (idx in this.nodes) {
+		var node_layout = this.nodes[idx];
+		
+		if (node_layout.type == SCgLayoutObjectType.Node) {
+			node_layout.object.position.x = node_layout.x;
+			node_layout.object.position.y = node_layout.y;
+		} else
+		{
+			if (node_layout.type == SCgLayoutObjectType.DotPoint) {
+				dots.push(node_layout);
+			}
+		}
+	}
+	
+	// setup dot points positions 
+	/*for (idx in dots) {
+		var dot = dots[idx];
+		
+		var edge = dot.object.target;
+		if (dot.source)
+			edge = dot.object.source;
+		
+		dot.x = edge.position.x;
+		dot.y = edge.position.y;
+	}*/
+	
+	this.onTickUpdate();
+};
+
+
+// ------------------------------------
+
+SCg.LayoutManager = function() {
+
+};
+
+SCg.LayoutManager.prototype = {
+	constructor: SCg.LayoutManager
+};
+
+SCg.LayoutManager.prototype.init = function(scene) {
+	this.scene = scene;
+	this.nodes = null;
+	this.edges = null;
+	
+	this.algorithm = null;
+};
+
+/**
+ * Prepare objects for layout
+ */
+SCg.LayoutManager.prototype.prepareObjects = function() {
+
+	this.nodes = new Array();
+	this.edges = new Array();
+	var objDict = {};
+	
+	// first of all we need to collect objects from scene, and build them representation for layout
+	for (idx in this.scene.nodes) {
+		var node = this.scene.nodes[idx];
+		var obj = new Object();
+		
+		obj.x = node.x;
+		obj.y = node.y;
+		obj.object = node;
+		obj.type = SCgLayoutObjectType.Node;
+		
+		objDict[node.id] = obj;
+		this.nodes.push(obj);
+	}
+	
+	for (idx in this.scene.edges) {
+		var edge = this.scene.edges[idx];
+		var obj = new Object();
+		
+		obj.object = edge;
+		obj.type = SCgLayoutObjectType.Edge;
+		
+		objDict[edge.id] = obj;
+		this.edges.push(obj);
+	}
+	
+	// store begin and end for edges
+	for (idx in this.edges) {
+		edge = this.edges[idx];
+		
+		source = objDict[edge.object.source.id];
+		target = objDict[edge.object.target.id];
+		
+		function getEdgeObj(srcObj, isSource) {
+			if (srcObj.type == SCgLayoutObjectType.Edge) {
+				var obj = new Object();
+				obj.type = SCgLayoutObjectType.DotPoint;
+				obj.object = srcObj.object;
+				obj.source = isSource;
+			
+				return obj;
+			}
+			return srcObj;
+		};
+				
+		edge.source = getEdgeObj(source, true);
+		edge.target = getEdgeObj(target, false);
+		
+		if (edge.source != source)
+			this.nodes.push(edge.source);
+		if (edge.target != target)
+			this.nodes.push(edge.target);
+	}
+	
+};
+
+/**
+ * Starts layout in scene
+ */
+SCg.LayoutManager.prototype.doLayout = function() {
+	var self = this;
+	
+	this.prepareObjects();
+	this.algorithm = new SCg.LayoutAlgorithmForceBased(this.nodes, this.edges, null, 
+														$.proxy(this.onTickUpdate, this), 
+														this.scene.getContainerSize());
+	this.algorithm.start();
+};
+
+SCg.LayoutManager.prototype.onTickUpdate = function() {	
+	this.scene.render.update();
+};
 
 

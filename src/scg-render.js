@@ -49,29 +49,6 @@ SCg.Render.prototype = {
 		
 		// ----------- test -----------
 		var self = this;
-		// init D3 force layout
-		this.force = d3.layout.force()
-			.nodes(this.scene.nodes)
-			.links(this.scene.edges)
-			.size([parseInt(this.d3_drawer.style("width")), parseInt(this.d3_drawer.style("height"))])
-			.linkDistance(190)
-			.charge(-1300)
-			.on('tick', function() {
-				self.d3_nodes.attr("transform", function(d) {
-					d.position.x = d.x; 
-					d.position.y = d.y; 
-					return 'translate(' + d.position.x + ', ' + d.position.y + ')'; 
-				});
-				self.d3_edges.select('path').attr('d', function(d) {
-					d.update();
-					return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
-				});
-				
-				self.d3_contours.attr('d', function(d) { 
-					d.update();
-					return self.d3_contour_line(d.verticies) + 'Z'; 
-				});
-			});
 	},
 	
 	// -------------- markers --------------------
@@ -160,7 +137,6 @@ SCg.Render.prototype = {
 			.attr('y', function(d) { return d.scale.y / 1.3; })
 			.text(function(d) { return d.text; });
 			
-			
 		// update edges visual
 		this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
 		
@@ -192,13 +168,24 @@ SCg.Render.prototype = {
 	},
 
 	updatePositions: function() {
-		this.d3_nodes.attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
+		this.d3_nodes.attr("transform", function(d) { 
+			return 'translate(' + d.position.x + ', ' + d.position.y + ')'
+		});
+		this.d3_edges.select('path').attr('d', function(d) {
+			d.update();
+			return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+		});
+				
+		this.d3_contours.attr('d', function(d) { 
+			d.update();
+			return self.d3_contour_line(d.verticies) + 'Z'; 
+		});
 	},
 	
-	relayout: function() {
-		this.force.start();
+	updateTexts: function() {
+		this.d3_nodes.select('text').text(function(d) { return d.text; });
 	},
-		
+			
 	// -------------- Objects --------------------
 	appendRenderNode: function(render_node) {
 		render_node.d3_group = this.d3_container.append("svg:g");

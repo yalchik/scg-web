@@ -182,10 +182,10 @@ SCg.ModelEdge = function(options) {
 	this.source = null;
 	this.target = null;
 
-	if (options.begin)
-		this.source = options.begin;
-	if (options.end)
-		this.target = options.end;
+	if (options.source)
+		this.source = options.source;
+	if (options.target)
+		this.target = options.target;
 
 	this.source_pos = new SCg.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
 	this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates

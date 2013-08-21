@@ -64,7 +64,8 @@ scgViewerWindow.prototype = {
 				var model_node = new SCg.ModelNode({ 
 						position: new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), //1000 * Math.random() - 500), 
 						sc_type: el.el_type,
-						text: el.id
+						text: "",
+						sc_addr: el.id
 					});
 				this.viewer.scene.appendNode(model_node);
 				
@@ -91,20 +92,24 @@ scgViewerWindow.prototype = {
                     edges.splice(idx, 1);
                     
 					var model_edge = new SCg.ModelEdge({
-						begin: beginNode,
-						end: endNode,
-						sc_type: obj.el_type
+						source: beginNode,
+						target: endNode,
+						sc_type: obj.el_type,
+						sc_addr: obj.id
 					});
 
 					this.viewer.scene.appendEdge(model_edge);
 					
 					elements[obj.id] = model_edge;
-                }
+                } 
             }
         }
 		
+		if (edges.length > 0)
+			alert("error");
+		
 		this.viewer.render.update();
-		this.viewer.render.relayout();
+		this.viewer.scene.layout();
     },
 
     /**
@@ -121,12 +126,19 @@ scgViewerWindow.prototype = {
      * Emit translate identifiers
      */
     translateIdentifiers    : function(language){
-
-        /*var objects = this._getObjectsForTranslate();
-        var self = this;
-        SCWeb.core.Translation.translate(objects, language, function(namesMap) {
-            self._translateObjects(namesMap);
-        });*/
+		
+		var self = this;
+ 		
+        SCWeb.core.Translation.translate(this.viewer.scene.getScAddrs(), language, function(namesMap) {
+            for (addr in namesMap) {
+				var obj = self.viewer.scene.getObjectByScAddr(addr);
+				if (obj) {
+					obj.text = namesMap[addr];
+				}
+			}
+			
+			self.viewer.render.updateTexts();
+        });
 
     },
 
