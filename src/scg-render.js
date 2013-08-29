@@ -9,6 +9,7 @@ SCg.Render.prototype = {
         this.containerId = params.containerId;
         this.d3_drawer = d3.select('#' + this.containerId).append("svg:svg").attr("pointer-events", "all").attr("width", '100%').attr("height", '100%');
         
+        
         var self = this;
         this.d3_container = this.d3_drawer.append('svg:g')
                                 .attr("class", "SCgSvg")
@@ -24,10 +25,10 @@ SCg.Render.prototype = {
                                 .on('dblclick', function() {
                                     self.onMouseDoubleClick(this, self);
                                     });
-        this.initMarkers();
+        this.initDefs();
                                     
         this.d3_container.append('svg:rect')
-                        .attr("class", "SCgContainer")
+                        .style("fill", "url(#backGrad)")
                         .attr('width', '100%') //parseInt(this.d3_drawer.style("width")))
                         .attr('height', '100%');//parseInt(this.d3_drawer.style("height")));
                         
@@ -51,10 +52,12 @@ SCg.Render.prototype = {
         var self = this;
     },
     
-    // -------------- markers --------------------
-    initMarkers: function() {
+    // -------------- Definitions --------------------
+    initDefs: function() {
         // define arrow markers for graph links
-        this.d3_drawer.append('svg:defs').append('svg:marker')
+        var defs = this.d3_drawer.append('svg:defs')
+        
+        defs.append('svg:marker')
             .attr('id', 'end-arrow')
             .attr('viewBox', '0 -5 10 10')
             .attr('refX', 8)
@@ -65,6 +68,20 @@ SCg.Render.prototype = {
             .attr('d', 'M0,-4L10,0L0,4')
             .attr('fill', '#000');
 
+        var grad = defs.append('svg:radialGradient')
+            .attr('id', 'backGrad')
+            .attr('cx', '50%')
+            .attr('cy', '50%')
+            .attr('r', '100%').attr("spreadMethod", "pad");
+            
+            grad.append('svg:stop')
+            .attr('offset', '0%')
+            .attr('stop-color', 'rgb(255,253,252)')
+            .attr('stop-opacity' , '1')
+            grad.append('svg:stop')
+            .attr('offset', '100%')
+            .attr('stop-color', 'rgb(245,245,245)')
+            .attr('stop-opacity', '1')
     },
     
     // -------------- draw -----------------------

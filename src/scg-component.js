@@ -31,8 +31,8 @@ scgViewerWindow.prototype = {
          */
         this.domContainer = config.container;
 
-		this.viewer = new SCg.Viewer();
-		this.viewer.init({container: "#" + config.container});
+        this.viewer = new SCg.Viewer();
+        this.viewer.init({containerId: config.container});
     },
 
     /**
@@ -40,8 +40,8 @@ scgViewerWindow.prototype = {
      * @param {Object} data
      */
     receiveData : function(data){
-		
-		this._buildGraph(data);
+        
+        this._buildGraph(data);
     },
 
     /**
@@ -52,30 +52,30 @@ scgViewerWindow.prototype = {
      */
     _buildGraph : function(data){
         
-		var elements = {};
-		var edges = new Array();
-		for (var i = 0; i < data.length; i++) {
-			var el = data[i];
-			
-			if (elements.hasOwnProperty(el.id))
-				continue;
-			
-			if (el.el_type & sc_type_node || el.el_type & sc_type_link) {
-				var model_node = new SCg.ModelNode({ 
-						position: new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), //1000 * Math.random() - 500), 
-						sc_type: el.el_type,
-						text: "",
-						sc_addr: el.id
-					});
-				this.viewer.scene.appendNode(model_node);
-				
-				elements[el.id] = model_node;
-			} else if (el.el_type & sc_type_arc_mask) {
-				edges.push(el);
-			}
-		}
-		
-		// create edges
+        var elements = {};
+        var edges = new Array();
+        for (var i = 0; i < data.length; i++) {
+            var el = data[i];
+            
+            if (elements.hasOwnProperty(el.id))
+                continue;
+            
+            if (el.el_type & sc_type_node || el.el_type & sc_type_link) {
+                var model_node = new SCg.ModelNode({ 
+                        position: new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), //1000 * Math.random() - 500), 
+                        sc_type: el.el_type,
+                        text: "",
+                        sc_addr: el.id
+                    });
+                this.viewer.scene.appendNode(model_node);
+                
+                elements[el.id] = model_node;
+            } else if (el.el_type & sc_type_arc_mask) {
+                edges.push(el);
+            }
+        }
+        
+        // create edges
         var founded = true;
         while (edges.length > 0 && founded) {
             founded = false;
@@ -91,25 +91,25 @@ scgViewerWindow.prototype = {
                     founded = true;
                     edges.splice(idx, 1);
                     
-					var model_edge = new SCg.ModelEdge({
-						source: beginNode,
-						target: endNode,
-						sc_type: obj.el_type,
-						sc_addr: obj.id
-					});
+                    var model_edge = new SCg.ModelEdge({
+                        source: beginNode,
+                        target: endNode,
+                        sc_type: obj.el_type,
+                        sc_addr: obj.id
+                    });
 
-					this.viewer.scene.appendEdge(model_edge);
-					
-					elements[obj.id] = model_edge;
+                    this.viewer.scene.appendEdge(model_edge);
+                    
+                    elements[obj.id] = model_edge;
                 } 
             }
         }
-		
-		if (edges.length > 0)
-			alert("error");
-		
-		this.viewer.render.update();
-		this.viewer.scene.layout();
+        
+        if (edges.length > 0)
+            alert("error");
+        
+        this.viewer.render.update();
+        this.viewer.scene.layout();
     },
 
     /**
@@ -117,7 +117,7 @@ scgViewerWindow.prototype = {
      * @return {Boolean}
      */
     destroy : function(){
-		delete this.viewer;
+        delete this.viewer;
         return true;
     },
 
@@ -126,18 +126,18 @@ scgViewerWindow.prototype = {
      * Emit translate identifiers
      */
     translateIdentifiers    : function(language){
-		
-		var self = this;
- 		
+        
+        var self = this;
+        
         SCWeb.core.Translation.translate(this.viewer.scene.getScAddrs(), language, function(namesMap) {
             for (addr in namesMap) {
-				var obj = self.viewer.scene.getObjectByScAddr(addr);
-				if (obj) {
-					obj.text = namesMap[addr];
-				}
-			}
-			
-			self.viewer.render.updateTexts();
+                var obj = self.viewer.scene.getObjectByScAddr(addr);
+                if (obj) {
+                    obj.text = namesMap[addr];
+                }
+            }
+            
+            self.viewer.render.updateTexts();
         });
 
     },
@@ -162,5 +162,5 @@ scgViewerWindow.prototype = {
 
 
 SCWeb.core.ComponentManager.appendComponentInitialize(function() {
-	SCWeb.core.ComponentManager.registerComponent(SCgComponent);
+    SCWeb.core.ComponentManager.registerComponent(SCgComponent);
 });
