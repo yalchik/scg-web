@@ -1,8 +1,8 @@
 var SCgObjectState = {
-	Normal: 0,
-	Deleted: 1,
-	Merged: 2,
-	NewInMemory: 3
+    Normal: 0,
+    Deleted: 1,
+    Merged: 2,
+    NewInMemory: 3
 };
 
 var ObjectId = 0;
@@ -16,78 +16,78 @@ var ObjectId = 0;
      * - position - object position. SCg.Vector3 object
      * - scale - object size. SCg.Vector2 object.
      * - sc_type - object type. See sc-types for more info.
-	 * - text - text identifier of object
+     * - text - text identifier of object
      */
 SCg.ModelObject = function(options) {
-	
-	this.need_observer_sync = true;
+    
+    this.need_observer_sync = true;
 
-	if (options.position) {
-		this.position = options.position;
-	}  else {
-		this.position = new SCg.Vector3(0.0, 0.0, 0.0);
-	}
+    if (options.position) {
+        this.position = options.position;
+    }  else {
+        this.position = new SCg.Vector3(0.0, 0.0, 0.0);
+    }
 
-	if (options.scale) {
-		this.scale = options.scale;
-	} else {
-		this.scale = new SCg.Vector2(20.0, 20.0);
-	}
+    if (options.scale) {
+        this.scale = options.scale;
+    } else {
+        this.scale = new SCg.Vector2(20.0, 20.0);
+    }
 
-	if (options.sc_type) {
-		this.sc_type = options.sc_type;
-	} else {
-		this.sc_type = sc_type_node;
-	}
+    if (options.sc_type) {
+        this.sc_type = options.sc_type;
+    } else {
+        this.sc_type = sc_type_node;
+    }
 
-	if (options.sc_addr) {
-		this.sc_addr = options.sc_addr;
-	} else {
-		this.sc_addr = null;
-	}
-	
-	if (options.text) {
-		this.text = options.text;
-	} else {
-		this.text = null;
-	}
-	
-	this.id = ObjectId++;
+    if (options.sc_addr) {
+        this.sc_addr = options.sc_addr;
+    } else {
+        this.sc_addr = null;
+    }
+    
+    if (options.text) {
+        this.text = options.text;
+    } else {
+        this.text = null;
+    }
+    
+    this.id = ObjectId++;
 
-	this.edges = [];	// list of connected edges
-	this.need_update = true;	// update flag
+    this.edges = [];    // list of connected edges
+    this.need_update = true;    // update flag
 };
 
 SCg.ModelObject.prototype = {
 
-	constructor: SCg.ModelObject
+    constructor: SCg.ModelObject
 
 };
 
 /**
  * Setup new position of object
  * @param {SCg.Vector3} pos
- *		New position of object
+ *      New position of object
  */
 SCg.ModelObject.prototype.setPosition = function(pos) {
-	this.position = pos;
-	this.need_observer_sync = true;
+    this.position = pos;
+    this.need_observer_sync = true;
 
-	this.requestUpdate();
-	this.notifyEdgesUpdate();
+    this.requestUpdate();
+    this.notifyEdgesUpdate();
 };
 
 /**
  * Setup new scale of object
  * @param {SCg.Vector2} scale
- *		New scale of object
+ *      New scale of object
  */
 SCg.ModelObject.prototype.setScale = function(scale) {
-	this.scale = scale;
-	this.need_observer_sync = true;
+    this.scale = scale;
+    this.need_observer_sync = true;
 
-	this.requestUpdate();
-	this.update();
+    this.requestUpdate();
+    this.update();
 };
 
 /**
@@ -95,7 +95,7 @@ SCg.ModelObject.prototype.setScale = function(scale) {
  */
 SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
 
-	for (var i = 0; i < this.edges.length; i++) {
+    for (var i = 0; i < this.edges.length; i++) {
        this.edges[i].need_update = true;
     }
 
@@ -105,26 +105,26 @@ SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
  * mark them for update.
  */
 SCg.ModelObject.prototype.requestUpdate = function() {
-	this.need_update = true;
-	for (var i = 0; i < this.edges.length; ++i) {
-		this.edges[i].requestUpdate();
-	}
+    this.need_update = true;
+    for (var i = 0; i < this.edges.length; ++i) {
+        this.edges[i].requestUpdate();
+    }
 };
 
 /** Updates object state.
  */
 SCg.ModelObject.prototype.update = function() {
 
-	this.need_update = false;
-	this.need_observer_sync = true;
+    this.need_update = false;
+    this.need_observer_sync = true;
 
-	for (var i = 0; i < this.edges.length; ++i) {
-		var edge = this.edges[i];
+    for (var i = 0; i < this.edges.length; ++i) {
+        var edge = this.edges[i];
 
-		if (edge.need_update) {
-			edge.update();
-		}
-	}
+        if (edge.need_update) {
+            edge.update();
+        }
+    }
 };
 
 /*! Calculate connector position.
@@ -133,7 +133,7 @@ SCg.ModelObject.prototype.update = function() {
  * @returns Returns position of connection point (new instance of SCg.Vector3, that can be modified later)
  */
 SCg.ModelObject.prototype.getConnectionPos = function(from, dotPos) {
-	return new SCg.Vector3(this.position.x, this.position.y, this.position.z);
+    return new SCg.Vector3(this.position.x, this.position.y, this.position.z);
 };
 
 
@@ -142,11 +142,11 @@ SCg.ModelObject.prototype.getConnectionPos = function(from, dotPos) {
 /**
  * Initialize sc.g-node object.
  * @param {Object} options
- * 		Initial options of sc.g-node. It can include params from base object
+ *      Initial options of sc.g-node. It can include params from base object
  */
 SCg.ModelNode = function(options) {
 
-	SCg.ModelObject.call(this, options);
+    SCg.ModelObject.call(this, options);
 
 };
 
@@ -154,17 +154,17 @@ SCg.ModelNode.prototype = Object.create( SCg.ModelObject.prototype );
 
 SCg.ModelNode.prototype.getConnectionPos = function(from, dotPos) {
 
-	SCg.ModelObject.prototype.getConnectionPos.call(this, from, dotPos);
+    SCg.ModelObject.prototype.getConnectionPos.call(this, from, dotPos);
 
-	var radius = this.scale.x;
-	var center = this.position;
-	
-	var result = new SCg.Vector3(0, 0, 0);
-	
-	result.copyFrom(from).sub(center).normalize();
-	result.multiplyScalar(radius).add(center);
+    var radius = this.scale.x;
+    var center = this.position;
+    
+    var result = new SCg.Vector3(0, 0, 0);
+    
+    result.copyFrom(from).sub(center).normalize();
+    result.multiplyScalar(radius).add(center);
 
-	return result;
+    return result;
 };
 
 
@@ -173,25 +173,25 @@ SCg.ModelNode.prototype.getConnectionPos = function(from, dotPos) {
 /**
  * Initialize sc.g-arc(edge) object
  * @param {Object} options
- * 		Initial opations of sc.g-arc. 
+ *      Initial opations of sc.g-arc. 
  */
 SCg.ModelEdge = function(options) {
- 	
-	SCg.ModelObject.call(this, options);
+    
+    SCg.ModelObject.call(this, options);
 
-	this.source = null;
-	this.target = null;
+    this.source = null;
+    this.target = null;
 
-	if (options.source)
-		this.source = options.source;
-	if (options.target)
-		this.target = options.target;
+    if (options.source)
+        this.source = options.source;
+    if (options.target)
+        this.target = options.target;
 
-	this.source_pos = new SCg.Vector3(0, 0, 0);	// the begin position of egde in world coordinates
-	this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
+    this.source_pos = new SCg.Vector3(0, 0, 0); // the begin position of egde in world coordinates
+    this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
 
-	this.requestUpdate();
-	this.update();
+    this.requestUpdate();
+    this.update();
 };
 
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
@@ -199,88 +199,88 @@ SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
 /** 
  * Setup new begin object for sc.g-edge
  * @param {Object} scg_obj
- * 		sc.g-object, that will be the begin of edge
+ *      sc.g-object, that will be the begin of edge
  */
 SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
-	
-	this.source = scg_obj;
+    
+    this.source = scg_obj;
 
-	this.need_observer_sync = true;
+    this.need_observer_sync = true;
 };
 
 /**
  * Setup new end object for sc.g-edge
  * @param {Object} scg_obj
- *		sc.g-object, that will be the end of edge
+ *      sc.g-object, that will be the end of edge
  */
  SCg.ModelEdge.prototype.setEnd = function(scg_obj) {
- 	this.target = scg_obj;
+    this.target = scg_obj;
 
- 	this.need_observer_sync = true;
+    this.need_observer_sync = true;
  };
 
  SCg.ModelEdge.prototype.update = function() {
- 	SCg.ModelObject.prototype.update.call(this);
+    SCg.ModelObject.prototype.update.call(this);
 
- 	// calculate begin and end positions
- 	this.source_pos = this.source.getConnectionPos(this.target.position, 0);
- 	this.target_pos = this.target.getConnectionPos(this.source.position, 0);
+    // calculate begin and end positions
+    this.source_pos = this.source.getConnectionPos(this.target.position, 0);
+    this.target_pos = this.target.getConnectionPos(this.source.position, 0);
 
- 	this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
+    this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
  };
  
  /*! Checks if this edge need to be drawen with arrow at the end
   */
  SCg.ModelEdge.prototype.hasArrow = function() {
-	return this.sc_type & (sc_type_arc_common | sc_type_arc_access);
+    return this.sc_type & (sc_type_arc_common | sc_type_arc_access);
  };
  
  //---------------- contour ----------------
  /**
  * Initialize sc.g-arc(edge) object
  * @param {Object} options
- * 		Initial opations of sc.g-arc. 
+ *      Initial opations of sc.g-arc. 
  */
 SCg.ModelContour = function(options) {
- 	
-	SCg.ModelObject.call(this, options);
+    
+    SCg.ModelObject.call(this, options);
 
-	this.childs = [];
-	this.verticies = [];
+    this.childs = [];
+    this.verticies = [];
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
 
 SCg.ModelContour.prototype.update = function() {
 
-	// http://jsfiddle.net/NNwFa/44/
-	
-	var verts = [];
-	var cx = 0;
-	var cy = 0;
-	for (var i = 0; i < this.childs.length; i++) {
-		var pos = this.childs[i].position;
-		verts.push([pos.x , pos.y]);
-		
-		cx += pos.x;
-		cy += pos.y;
-	}
-	
-	cx /= float(this.childs.length);
-	cy /= float(this.childs.length);
-	
-	var cV = new SCg.Vector2(cx, cy);
-	var pV = new SCg.Vector2(0, 0);
-	
-	for (var i = 0; i < this.verts.length; i++) {
-		var pos = this.verts[i];
-		
-		
-		cx += pos.x;
-		cy += pos.y;
-	}
-	
-	this.verticies = d3.geom.hull(verts);
+    // http://jsfiddle.net/NNwFa/44/
+    
+    var verts = [];
+    var cx = 0;
+    var cy = 0;
+    for (var i = 0; i < this.childs.length; i++) {
+        var pos = this.childs[i].position;
+        verts.push([pos.x , pos.y]);
+        
+        cx += pos.x;
+        cy += pos.y;
+    }
+    
+    cx /= float(this.childs.length);
+    cy /= float(this.childs.length);
+    
+    var cV = new SCg.Vector2(cx, cy);
+    var pV = new SCg.Vector2(0, 0);
+    
+    for (var i = 0; i < this.verts.length; i++) {
+        var pos = this.verts[i];
+        
+        
+        cx += pos.x;
+        cy += pos.y;
+    }
+    
+    this.verticies = d3.geom.hull(verts);
 };
 
 /**
@@ -288,7 +288,7 @@ SCg.ModelContour.prototype.update = function() {
  * @param {SCg.ModelObject} child Child object to append
  */
 SCg.ModelContour.prototype.addChild = function(child) {
-	this.childs.push(child);
+    this.childs.push(child);
 };
 
 /**
@@ -296,6 +296,6 @@ SCg.ModelContour.prototype.addChild = function(child) {
  * @param {SCg.ModelObject} child Child object for remove
  */
  SCg.ModelContour.prototype.removeChild = function(child) {
-	this.childs.remove(child);
+    this.childs.remove(child);
  };
  

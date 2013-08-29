@@ -1,9 +1,9 @@
 var SCgLayoutObjectType = {
-	Node: 0,
-	Edge: 1,
-	Link: 2,
-	Contour: 3,
-	DotPoint: 4
+    Node: 0,
+    Edge: 1,
+    Link: 2,
+    Contour: 3,
+    DotPoint: 4
 };
 
 // Layout algorithms
@@ -13,70 +13,70 @@ var SCgLayoutObjectType = {
  * Base layout algorithm
  */
 SCg.LayoutAlgorithm = function(nodes, edges, contours, onTickUpdate) {
-	this.nodes = nodes;
-	this.edges = edges;
-	this.contours = contours;
-	this.onTickUpdate = onTickUpdate;
+    this.nodes = nodes;
+    this.edges = edges;
+    this.contours = contours;
+    this.onTickUpdate = onTickUpdate;
 };
 
 SCg.LayoutAlgorithm.prototype = {
-	constructor: SCg.LayoutAlgorithm
+    constructor: SCg.LayoutAlgorithm
 };
 
 // --------------------------
 
 SCg.LayoutAlgorithmForceBased = function(nodes, edges, contours, onTickUpdate, rect) {
-	SCg.LayoutAlgorithm.call(this, nodes, edges, contours, onTickUpdate);
-	this.rect = rect;
+    SCg.LayoutAlgorithm.call(this, nodes, edges, contours, onTickUpdate);
+    this.rect = rect;
 };
 
 SCg.LayoutAlgorithmForceBased.prototype = Object.create( SCg.LayoutAlgorithm );
 
 SCg.LayoutAlgorithmForceBased.prototype.start = function() {
-	// init D3 force layout
-	var self = this;
-	this.force = d3.layout.force()
-		.nodes(this.nodes)
-		.links(this.edges)
-		.size(this.rect)
-		.linkDistance(190)
-		.charge(-1300)
-		.on('tick', function() {
-			self.onLayoutTick();
-		})
-		.start();
+    // init D3 force layout
+    var self = this;
+    this.force = d3.layout.force()
+        .nodes(this.nodes)
+        .links(this.edges)
+        .size(this.rect)
+        .linkDistance(190)
+        .charge(-1300)
+        .on('tick', function() {
+            self.onLayoutTick();
+        })
+        .start();
 };
 
 SCg.LayoutAlgorithmForceBased.prototype.onLayoutTick = function() {
-	
-	var dots = [];
-	for (idx in this.nodes) {
-		var node_layout = this.nodes[idx];
-		
-		if (node_layout.type == SCgLayoutObjectType.Node) {
-			node_layout.object.position.x = node_layout.x;
-			node_layout.object.position.y = node_layout.y;
-		} else
-		{
-			if (node_layout.type == SCgLayoutObjectType.DotPoint) {
-				dots.push(node_layout);
-			}
-		}
-	}
-	
-	// setup dot points positions 
-	/*for (idx in dots) {
-		var dot = dots[idx];
-		
-		var edge = dot.object.target;
-		if (dot.source)
-			edge = dot.object.source;
-		
-		dot.x = edge.position.x;
-		dot.y = edge.position.y;
-	}*/
-	
-	this.onTickUpdate();
+    
+    var dots = [];
+    for (idx in this.nodes) {
+        var node_layout = this.nodes[idx];
+        
+        if (node_layout.type == SCgLayoutObjectType.Node) {
+            node_layout.object.position.x = node_layout.x;
+            node_layout.object.position.y = node_layout.y;
+        } else
+        {
+            if (node_layout.type == SCgLayoutObjectType.DotPoint) {
+                dots.push(node_layout);
+            }
+        }
+    }
+    
+    // setup dot points positions 
+    /*for (idx in dots) {
+        var dot = dots[idx];
+        
+        var edge = dot.object.target;
+        if (dot.source)
+            edge = dot.object.source;
+        
+        dot.x = edge.position.x;
+        dot.y = edge.position.y;
+    }*/
+    
+    this.onTickUpdate();
 };
 
 
@@ -87,15 +87,15 @@ SCg.LayoutManager = function() {
 };
 
 SCg.LayoutManager.prototype = {
-	constructor: SCg.LayoutManager
+    constructor: SCg.LayoutManager
 };
 
 SCg.LayoutManager.prototype.init = function(scene) {
-	this.scene = scene;
-	this.nodes = null;
-	this.edges = null;
-	
-	this.algorithm = null;
+    this.scene = scene;
+    this.nodes = null;
+    this.edges = null;
+    
+    this.algorithm = null;
 };
 
 /**
@@ -103,78 +103,78 @@ SCg.LayoutManager.prototype.init = function(scene) {
  */
 SCg.LayoutManager.prototype.prepareObjects = function() {
 
-	this.nodes = new Array();
-	this.edges = new Array();
-	var objDict = {};
-	
-	// first of all we need to collect objects from scene, and build them representation for layout
-	for (idx in this.scene.nodes) {
-		var node = this.scene.nodes[idx];
-		var obj = new Object();
-		
-		obj.x = node.x;
-		obj.y = node.y;
-		obj.object = node;
-		obj.type = SCgLayoutObjectType.Node;
-		
-		objDict[node.id] = obj;
-		this.nodes.push(obj);
-	}
-	
-	for (idx in this.scene.edges) {
-		var edge = this.scene.edges[idx];
-		var obj = new Object();
-		
-		obj.object = edge;
-		obj.type = SCgLayoutObjectType.Edge;
-		
-		objDict[edge.id] = obj;
-		this.edges.push(obj);
-	}
-	
-	// store begin and end for edges
-	for (idx in this.edges) {
-		edge = this.edges[idx];
-		
-		source = objDict[edge.object.source.id];
-		target = objDict[edge.object.target.id];
-		
-		function getEdgeObj(srcObj, isSource) {
-			if (srcObj.type == SCgLayoutObjectType.Edge) {
-				var obj = new Object();
-				obj.type = SCgLayoutObjectType.DotPoint;
-				obj.object = srcObj.object;
-				obj.source = isSource;
-			
-				return obj;
-			}
-			return srcObj;
-		};
-				
-		edge.source = getEdgeObj(source, true);
-		edge.target = getEdgeObj(target, false);
-		
-		if (edge.source != source)
-			this.nodes.push(edge.source);
-		if (edge.target != target)
-			this.nodes.push(edge.target);
-	}
-	
+    this.nodes = new Array();
+    this.edges = new Array();
+    var objDict = {};
+    
+    // first of all we need to collect objects from scene, and build them representation for layout
+    for (idx in this.scene.nodes) {
+        var node = this.scene.nodes[idx];
+        var obj = new Object();
+        
+        obj.x = node.position.x;
+        obj.y = node.position.y;
+        obj.object = node;
+        obj.type = SCgLayoutObjectType.Node;
+        
+        objDict[node.id] = obj;
+        this.nodes.push(obj);
+    }
+    
+    for (idx in this.scene.edges) {
+        var edge = this.scene.edges[idx];
+        var obj = new Object();
+        
+        obj.object = edge;
+        obj.type = SCgLayoutObjectType.Edge;
+        
+        objDict[edge.id] = obj;
+        this.edges.push(obj);
+    }
+    
+    // store begin and end for edges
+    for (idx in this.edges) {
+        edge = this.edges[idx];
+        
+        source = objDict[edge.object.source.id];
+        target = objDict[edge.object.target.id];
+        
+        function getEdgeObj(srcObj, isSource) {
+            if (srcObj.type == SCgLayoutObjectType.Edge) {
+                var obj = new Object();
+                obj.type = SCgLayoutObjectType.DotPoint;
+                obj.object = srcObj.object;
+                obj.source = isSource;
+            
+                return obj;
+            }
+            return srcObj;
+        };
+                
+        edge.source = getEdgeObj(source, true);
+        edge.target = getEdgeObj(target, false);
+        
+        if (edge.source != source)
+            this.nodes.push(edge.source);
+        if (edge.target != target)
+            this.nodes.push(edge.target);
+    }
+    
 };
 
 /**
  * Starts layout in scene
  */
 SCg.LayoutManager.prototype.doLayout = function() {
-	var self = this;
-	
-	this.prepareObjects();
-	this.algorithm = new SCg.LayoutAlgorithmForceBased(this.nodes, this.edges, null, 
-														$.proxy(this.onTickUpdate, this), 
-														this.scene.getContainerSize());
-	this.algorithm.start();
+    var self = this;
+    
+    this.prepareObjects();
+    this.algorithm = new SCg.LayoutAlgorithmForceBased(this.nodes, this.edges, null, 
+                                                        $.proxy(this.onTickUpdate, this), 
+                                                        this.scene.getContainerSize());
+    this.algorithm.start();
 };
 
-SCg.LayoutManager.prototype.onTickUpdate = function() {	
-	this.scene.render.update();
+SCg.LayoutManager.prototype.onTickUpdate = function() { 
+    this.scene.render.update();
 };
