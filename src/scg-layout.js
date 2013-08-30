@@ -39,8 +39,29 @@ SCg.LayoutAlgorithmForceBased.prototype.start = function() {
         .nodes(this.nodes)
         .links(this.edges)
         .size(this.rect)
-        .linkDistance(190)
-        .charge(-1300)
+	.gravity(0.1)
+        .linkDistance(function(edge){
+		if (edge.source.type == SCgLayoutObjectType.DotPoint ||
+			edge.target.type == SCgLayoutObjectType.DotPoint) {
+			return 50;
+		}
+		
+		return 170;
+	})
+	.linkStrength(function(edge){
+		if (edge.source.type == SCgLayoutObjectType.DotPoint ||
+			edge.target.type == SCgLayoutObjectType.DotPoint) {
+			return 1.0;
+		}
+
+		return 0.9;
+	})
+        .charge(function(node) {
+		if (node.type == SCgLayoutObjectType.DotPoint) {
+			return 0;
+		}
+		return -1000;
+	})
         .on('tick', function() {
             self.onLayoutTick();
         })
@@ -65,7 +86,7 @@ SCg.LayoutAlgorithmForceBased.prototype.onLayoutTick = function() {
     }
     
     // setup dot points positions 
-    /*for (idx in dots) {
+    for (idx in dots) {
         var dot = dots[idx];
         
         var edge = dot.object.target;
@@ -74,7 +95,7 @@ SCg.LayoutAlgorithmForceBased.prototype.onLayoutTick = function() {
         
         dot.x = edge.position.x;
         dot.y = edge.position.y;
-    }*/
+    }
     
     this.onTickUpdate();
 };
