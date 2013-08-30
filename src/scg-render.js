@@ -57,16 +57,7 @@ SCg.Render.prototype = {
         // define arrow markers for graph links
         var defs = this.d3_drawer.append('svg:defs')
         
-        defs.append('svg:marker')
-            .attr('id', 'end-arrow')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 8)
-            .attr('markerWidth', 7)
-            .attr('markerHeight', 10)
-            .attr('orient', 'auto')
-          .append('svg:path')
-            .attr('d', 'M0,-4L10,0L0,4')
-            .attr('fill', '#000');
+        SCgAlphabet.initSvgDefs(defs);
 
         var grad = defs.append('svg:radialGradient')
             .attr('id', 'backGrad')
@@ -94,20 +85,28 @@ SCg.Render.prototype = {
         
         // add nodes that haven't visual
         var g = this.d3_nodes.enter().append('svg:g')
-                                     .attr("transform", function(d) { return 'translate(' + d.position.x + ', ' + d.position.y + ')'} );
-        g.append('svg:circle')
-            .attr('class', 'SCgNode')
-            .attr('r', 10)
+            .attr('class', function(d) {
+                if (!(d.sc_type & sc_type_constancy_mask)) {
+                    return 'SCgNodeEmpty';
+                }
+                
+                return 'SCgNode';
+            })
+            .attr("transform", function(d) {
+                return 'translate(' + d.position.x + ', ' + d.position.y + ')';
+            })
             .on('mouseover', function(d) {
                 // enlarge target node
-                d3.select(this).attr('transform', 'scale(1.1)')
-                               .classed('SCgHighlighted', true);
+                d3.select(this).classed('SCgHighlighted', true);
                 self.object_under_mouse = d;
             })
             .on('mouseout', function(d) {
                 // unenlarge target node
-                d3.select(this).attr('transform', '')
-                               .classed('SCgHighlighted', false);
+                d3.select(this)
+                    .attr('transform', function(d) {
+                        return 'translate(' + d.position.x + ', ' + d.position.y + ')';
+                    })
+                    .classed('SCgHighlighted', false);
                 self.object_under_mouse = null;
             })
             .on('mousedown', function(d) {
@@ -148,6 +147,10 @@ SCg.Render.prototype = {
             
                 self.update();
             });
+        g.append('svg:use')
+            .attr('xlink:href', function(d) {
+                return '#' + SCgAlphabet.getDefId(d.sc_type); 
+            })
         g.append('svg:text')
             .attr('class', 'SCgText')
             .attr('x', function(d) { return d.scale.x / 1.3; })

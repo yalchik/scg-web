@@ -78,12 +78,12 @@
 				];
 
 				nodes = [];
-				for (var i = 0; i < 10; i++)
+				for (var i = 0; i < types.length; i++)
 				{
 					var model_node = new SCg.ModelNode({ 
 						position: new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0), //1000 * Math.random() - 500), 
 						scale: new SCg.Vector2(20, 20),
-						sc_type: types[Math.floor((Math.random() * types.length))],
+						sc_type: types[i],
 						text: "Object_" + i.toString()
 					});
 					viewer.scene.appendNode(model_node);
@@ -91,7 +91,7 @@
 				}
 				
 				edges = []
-				for (var i = 0; i < 10; i++)
+				for (var i = 0; i < 0; i++)
 				{
 					var n1 = 0;
 					var n2 = 0;
@@ -109,13 +109,13 @@
 					edges.push(model_edge);
 				}
 				
-				var model_edge = new SCg.ModelEdge({
+				/*var model_edge = new SCg.ModelEdge({
 						source: nodes[0],
 						target: edges[0],
 						sc_type: sc_type_arc_access | sc_type_arc_perm | sc_type_arc_neg | sc_type_const
 					});
 
-				viewer.scene.appendEdge(model_edge);
+				viewer.scene.appendEdge(model_edge);*/
 				
 				// contour
 				/*var model_contour = new SCg.ModelContour({});

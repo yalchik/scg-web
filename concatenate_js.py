@@ -1,7 +1,7 @@
 """
 Concatenates all js files from specified directory to the single js file.
 Usage example:
-concatenate_js.py C:\js_source_dir C:\concatenated_file.js
+concatenate_js.py <js_source_dir> <concatenated_file.js>
 """
 import sys
 import os
@@ -11,11 +11,12 @@ sources = [
         'scg-math.js',
         'scg-model.js',
         'scg-model-objects.js',
+        'scg-alphabet.js',
         'scg-render.js',
         #'scg-render-objects.js',
         'scg-scene.js',
-		'scg-component.js',
-		'scg-layout.js'
+        'scg-component.js',
+        'scg-layout.js'
         ]
 
 def create_file(source_dir, target_file_path):
