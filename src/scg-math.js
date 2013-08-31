@@ -4,7 +4,18 @@ SCg.Vector2 = function(x, y) {
 };
 
 SCg.Vector2.prototype = {
-	constructor: SCg.Vector2
+	constructor: SCg.Vector2,
+	
+	copyFrom: function(other) {
+		this.x = ohter.x;
+		this.y = other.y;
+		
+		return this;
+	},
+	
+	clone: function() {
+		return new SCg.Vector2(this.x, this.y);
+	}
 };
 
 
@@ -26,6 +37,10 @@ SCg.Vector3.prototype = {
 		return this;
 	},
 	
+	clone: function() {
+		return new SCg.Vector3(this.x, this.y, this.z);
+	},
+	
 	sub: function(other) {
 		this.x -= other.x;
 		this.y -= other.y;
@@ -38,6 +53,22 @@ SCg.Vector3.prototype = {
 		this.x += other.x;
 		this.y += other.y;
 		this.z += other.z;
+		
+		return this;
+	},
+	
+	mul: function(other) {
+		this.x *= other.x;
+		this.y *= other.y;
+		this.z *= other.z;
+		
+		return this;
+	},
+	
+	div: function(other) {
+		this.x /= other.x;
+		this.y /= other.y;
+		this.z /= other.z;
 		
 		return this;
 	},

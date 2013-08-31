@@ -56,7 +56,7 @@
 				var viewer = new SCg.Viewer();
 				viewer.init({containerId: "scg-viewer"});
 
-				var types = [
+				var node_types = [
 					sc_type_node,
 	 				sc_type_node | sc_type_const,
 	 				sc_type_node | sc_type_const | sc_type_node_material,
@@ -78,20 +78,48 @@
 				];
 
 				nodes = [];
-				for (var i = 0; i < types.length; i++)
+				for (var i = 0; i < node_types.length; i++)
 				{
 					var model_node = new SCg.ModelNode({ 
 						position: new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0), //1000 * Math.random() - 500), 
 						scale: new SCg.Vector2(20, 20),
-						sc_type: types[i],
+						sc_type: node_types[i],
 						text: "Object_" + i.toString()
 					});
 					viewer.scene.appendNode(model_node);
 					nodes.push(model_node);
 				}
 				
+
+				var edge_types = [
+					sc_type_edge_common,
+					sc_type_arc_common,
+					sc_type_arc_access,
+					sc_type_arc_pos_const_perm, 
+					
+					sc_type_edge_common | sc_type_const,
+					sc_type_edge_common | sc_type_var,
+					
+					sc_type_arc_common | sc_type_const,
+					sc_type_arc_common | sc_type_var,
+					
+					sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_perm,
+					
+					sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_perm,
+					sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_perm,
+					sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_perm,
+					sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_perm,
+					
+					sc_type_arc_access | sc_type_const | sc_type_arc_pos | sc_type_arc_temp,
+					sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_temp,
+					sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_temp,
+					sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_temp,
+					sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_temp,
+					sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_temp
+				];
+				
 				edges = []
-				for (var i = 0; i < 0; i++)
+				for (var i = 0; i < edge_types.length; i++)
 				{
 					var n1 = 0;
 					var n2 = 0;
@@ -102,7 +130,7 @@
 					var model_edge = new SCg.ModelEdge({
 						source: nodes[n1],
 						target: nodes[n2],
-						sc_type: sc_type_arc_access | sc_type_arc_perm | sc_type_arc_neg | sc_type_const
+						sc_type: edge_types[i]
 					});
 
 					viewer.scene.appendEdge(model_edge);

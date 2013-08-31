@@ -97,7 +97,7 @@ SCg.Render.prototype = {
             })
             .on('mouseover', function(d) {
                 // enlarge target node
-                d3.select(this).classed('SCgHighlighted', true);
+                d3.select(this).classed('SCgStateHighlighted', true);
                 self.object_under_mouse = d;
             })
             .on('mouseout', function(d) {
@@ -106,7 +106,7 @@ SCg.Render.prototype = {
                     .attr('transform', function(d) {
                         return 'translate(' + d.position.x + ', ' + d.position.y + ')';
                     })
-                    .classed('SCgHighlighted', false);
+                    .classed('SCgStateHighlighted', false);
                 self.object_under_mouse = null;
             })
             .on('mousedown', function(d) {
@@ -161,19 +161,16 @@ SCg.Render.prototype = {
         this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
         
         // add edges that haven't visual
-        g = this.d3_edges.enter().append('svg:g');
-        
-        g.append('svg:path')
-            .attr('class', 'SCgEdge')
-            .attr('d', function(d) {
-                return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
-            })
-            .style('marker-end', function(d) { return d.hasArrow() ? 'url(#end-arrow)' : ''; })
+        this.d3_edges.enter().append('svg:g')
+            .classed('SCgStateNormal', true)
             .on('mouseover', function(d) {
-                d3.select(this).classed('SCgHighlighted', true);
+                d3.select(this).classed('SCgStateHighlighted', true);
             })
             .on('mouseout', function(d) {
-                d3.select(this).classed('SCgHighlighted', false);
+                d3.select(this).classed('SCgStateHighlighted', false);
+            })
+            .each(function(d) {
+                SCgAlphabet.updateEdge(d, d3.select(this));
             });
             
             
@@ -191,9 +188,9 @@ SCg.Render.prototype = {
         this.d3_nodes.attr("transform", function(d) { 
             return 'translate(' + d.position.x + ', ' + d.position.y + ')'
         });
-        this.d3_edges.select('path').attr('d', function(d) {
+        this.d3_edges.each(function(d) {
             d.update();
-            return 'M' + d.source_pos.x + ',' + d.source_pos.y + 'L' + d.target_pos.x + ',' + d.target_pos.y;
+            SCgAlphabet.updateEdge(d, d3.select(this));
         });
                 
         this.d3_contours.attr('d', function(d) { 
