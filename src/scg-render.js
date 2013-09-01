@@ -1,4 +1,5 @@
 
+
 SCg.Render = function() {
     this.scene = null;
 };
@@ -9,6 +10,7 @@ SCg.Render.prototype = {
         this.containerId = params.containerId;
         this.d3_drawer = d3.select('#' + this.containerId).append("svg:svg").attr("pointer-events", "all").attr("width", '100%').attr("height", '100%');
         
+        d3.select('#' + this.containerId).attr('style', 'disbplay: block');
         
         var self = this;
         this.d3_container = this.d3_drawer.append('svg:g')
@@ -25,6 +27,15 @@ SCg.Render.prototype = {
                                 .on('dblclick', function() {
                                     self.onMouseDoubleClick(this, self);
                                     });
+        
+        // need to check if container is visible
+        d3.select('body')
+                .on('keydown', function() {
+                    self.onKeyDown(d3.event.keyCode);
+                })
+                .on('keyup', function() {
+                    self.onKeyUp(d3.event.keyCode);
+                });
         this.initDefs();
                                     
         this.d3_container.append('svg:rect')
@@ -34,7 +45,7 @@ SCg.Render.prototype = {
                         
                         
         this.d3_drag_line = this.d3_container.append('svg:path')
-                .attr('class', 'SCgEdge dragline hidden')
+                .attr('class', 'dragline hidden')
                 .attr('d', 'M0,0L0,0');
                 
         this.d3_contour_line = d3.svg.line().interpolate("cardinal-closed");
@@ -42,14 +53,7 @@ SCg.Render.prototype = {
         this.d3_contours = this.d3_container.append('svg:g').selectAll('path');
         this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
         this.d3_nodes = this.d3_container.append('svg:g').selectAll('g');
-                                
-        this.mouse_down_node = null;
-        this.object_under_mouse = null;
-        this.selected_node = null;
-        
-        
-        // ----------- test -----------
-        var self = this;
+
     },
     
     // -------------- Definitions --------------------
@@ -86,11 +90,7 @@ SCg.Render.prototype = {
         // add nodes that haven't visual
         var g = this.d3_nodes.enter().append('svg:g')
             .attr('class', function(d) {
-                if (!(d.sc_type & sc_type_constancy_mask)) {
-                    return 'SCgNodeEmpty';
-                }
-                
-                return 'SCgNode';
+                return (d.sc_type & sc_type_constancy_mask) ? 'SCgNode' : 'SCgNodeEmpty';
             })
             .attr("transform", function(d) {
                 return 'translate(' + d.position.x + ', ' + d.position.y + ')';
@@ -98,55 +98,19 @@ SCg.Render.prototype = {
             .on('mouseover', function(d) {
                 // enlarge target node
                 d3.select(this).classed('SCgStateHighlighted', true);
-                self.object_under_mouse = d;
+                self.scene.onMouseOverObject(d);
             })
             .on('mouseout', function(d) {
-                // unenlarge target node
-                d3.select(this)
-                    .attr('transform', function(d) {
-                        return 'translate(' + d.position.x + ', ' + d.position.y + ')';
-                    })
-                    .classed('SCgStateHighlighted', false);
-                self.object_under_mouse = null;
+                d3.select(this).classed('SCgStateHighlighted', false)
+                self.scene.onMouseOutObject(d);
             })
             .on('mousedown', function(d) {
-                if(d3.event.ctrlKey) return;
-
-                // select node
-                self.mouse_down_node = d;
-                if (self.mouse_down_node === self.selected_node) 
-                    self.selected_node = null;
-                else 
-                    self.selected_node = self.mouse_down_node;
-
-                // reposition drag line
-                self.d3_drag_line
-                    .classed('hidden', false)
-                    .attr('d', 'M' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y + 'L' + self.mouse_down_node.position.x + ',' + self.mouse_down_node.position.y);
-
-                self.update();
+                self.scene.onMouseDownObject(d);
             })
             .on('mouseup', function(d) {
-                
-                if (!self.mouse_down_node) return;
-
-                // needed by FF
-                self.d3_drag_line
-                    .classed('hidden', true);
-
-                // check for drag-to-self
-                mouse_up_node = d;
-                if (mouse_up_node === self.mouse_down_node) { 
-                    self.mouse_down_node = null;
-                    return; 
-                }
-
-                // add edge to graph
-                self.scene.createEdge(self.mouse_down_node, mouse_up_node, null);
-                self.relayout();
-            
-                self.update();
+                self.scene.onMouseUpObject(d);
             });
+                        
         g.append('svg:use')
             .attr('xlink:href', function(d) {
                 return '#' + SCgAlphabet.getDefId(d.sc_type); 
@@ -165,9 +129,17 @@ SCg.Render.prototype = {
             .classed('SCgStateNormal', true)
             .on('mouseover', function(d) {
                 d3.select(this).classed('SCgStateHighlighted', true);
+                self.scene.onMouseOverObject(d);
             })
             .on('mouseout', function(d) {
                 d3.select(this).classed('SCgStateHighlighted', false);
+                self.scene.onMouseOutObject(d);
+            })
+            .on('mousedown', function(d) {
+                self.scene.onMouseDownObject(d);
+            })
+            .on('mouseup', function(d) {
+                self.scene.onMouseUpObject(d);
             })
             .each(function(d) {
                 SCgAlphabet.updateEdge(d, d3.select(this));
@@ -181,26 +153,74 @@ SCg.Render.prototype = {
                                     .attr('d', d3.svg.line().interpolate('cardinal-closed'))
                                     .attr('class', 'SCgContour');
         
-        this.updatePositions();
+        this.updateObjects();
     },
 
-    updatePositions: function() {
-        this.d3_nodes.attr("transform", function(d) { 
-            return 'translate(' + d.position.x + ', ' + d.position.y + ')'
+    updateObjects: function() {
+        this.d3_nodes.each(function (d) {
+            
+            if (!d.need_observer_sync) return; // do nothing
+            
+            d.need_observer_sync = false;
+            
+            d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
+                    .classed('SCgStateSelected', function(d) {
+                        return d.is_selected;
+                    });
         });
+        
         this.d3_edges.each(function(d) {
-            d.update();
+            
+            if (!d.need_observer_sync) return; // do nothing
+            d.need_observer_sync = false;
+            
+            if (d.need_update)
+                d.update();
             SCgAlphabet.updateEdge(d, d3.select(this));
         });
                 
-        this.d3_contours.attr('d', function(d) { 
-            d.update();
-            return self.d3_contour_line(d.verticies) + 'Z'; 
+        this.d3_contours.each(function(d) {
+            d3.select(this).attr('d', function(d) { 
+                
+                if (!d.need_observer_sync) return; // do nothing
+                
+                if (d.need_update)
+                    d.update();
+                return self.d3_contour_line(d.verticies) + 'Z'; 
+            });
         });
+
     },
     
     updateTexts: function() {
         this.d3_nodes.select('text').text(function(d) { return d.text; });
+    },
+    
+    updateDragLine: function() {
+        
+        if (this.scene.drag_line_points.length < 1) {
+            this.d3_drag_line.classed('hidden', true);
+            return;
+        }
+        
+        this.d3_drag_line.classed('hidden', false);
+        
+        var d_str = '';
+        // create path description
+        for (idx in this.scene.drag_line_points) {
+            var pt = this.scene.drag_line_points[idx];
+            
+            if (idx == 0) 
+                d_str += 'M';
+            else
+                d_str += 'L';
+            d_str += pt[0] + ',' + pt[1];
+        }
+    
+        d_str += 'L' + this.scene.mouse_pos.x + ',' + this.scene.mouse_pos.y;
+        
+        // update drag line
+        this.d3_drag_line.attr('d', d_str);
     },
             
     // -------------- Objects --------------------
@@ -226,23 +246,23 @@ SCg.Render.prototype = {
     onMouseMove: function(window, render) {
         var point = d3.mouse(window);
         render.scene.onMouseMove(point[0], point[1]);
-        
-        if (!this.mouse_down_node) return;
-
-        // update drag line
-        this.d3_drag_line.attr('d', 'M' + this.mouse_down_node.position.x + ',' + this.mouse_down_node.position.y + 'L' + point[0] + ',' + point[1]);
     },
     
     onMouseDoubleClick: function(window, render) {
         var point = d3.mouse(window);
-        
-        if (!render.object_under_mouse) {
-            render.scene.createNode(sc_type_node, new SCg.Vector3(point[0], point[1], 0), null);
-            render.update();
-//      render.relayout();
-        }   
+        this.scene.onMouseDoubleClick(point[0], point[1]);
     },
     
+    onKeyDown: function(key_code) {
+        this.scene.onKeyDown(key_code);
+    },
+    
+    onKeyUp: function(key_code) {
+        this.scene.onKeyUp(key_code);
+    },
+    
+    
+    // ------- help functions -----------
     getContainerSize: function() {
         var el = document.getElementById(this.containerId);
         return [el.clientWidth, el.clientHeight];

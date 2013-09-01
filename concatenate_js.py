@@ -8,6 +8,7 @@ import os
 
 sources = [
         'scg.js',
+        'scg-debug.js',
         'scg-math.js',
         'scg-model.js',
         'scg-model-objects.js',
@@ -15,8 +16,8 @@ sources = [
         'scg-render.js',
         #'scg-render-objects.js',
         'scg-scene.js',
-        #'scg-component.js',
-        'scg-layout.js'
+        'scg-layout.js',
+        'scg-component.js'
         ]
 
 def create_file(source_dir, target_file_path):
@@ -27,8 +28,6 @@ def create_file(source_dir, target_file_path):
         lines.extend(f.readlines())
         f.close()
         lines.append("\n\n")
-
-
 
     target_dir = '/'.join(target_file_path.split('/')[:-1])
     if not os.path.isdir(target_dir) and len(target_dir) > 0:

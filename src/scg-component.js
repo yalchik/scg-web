@@ -31,8 +31,8 @@ scgViewerWindow.prototype = {
          */
         this.domContainer = config.container;
 
-        this.viewer = new SCg.Viewer();
-        this.viewer.init({containerId: config.container});
+        this.editor = new SCg.Editor();
+        this.editor.init({containerId: config.container});
     },
 
     /**
@@ -67,7 +67,7 @@ scgViewerWindow.prototype = {
                         text: "",
                         sc_addr: el.id
                     });
-                this.viewer.scene.appendNode(model_node);
+                this.editor.scene.appendNode(model_node);
                 
                 elements[el.id] = model_node;
             } else if (el.el_type & sc_type_arc_mask) {
@@ -98,7 +98,7 @@ scgViewerWindow.prototype = {
                         sc_addr: obj.id
                     });
 
-                    this.viewer.scene.appendEdge(model_edge);
+                    this.editor.scene.appendEdge(model_edge);
                     
                     elements[obj.id] = model_edge;
                 } 
@@ -108,8 +108,8 @@ scgViewerWindow.prototype = {
         if (edges.length > 0)
             alert("error");
         
-        this.viewer.render.update();
-        this.viewer.scene.layout();
+        this.editor.render.update();
+        this.editor.scene.layout();
     },
 
     /**
@@ -117,7 +117,7 @@ scgViewerWindow.prototype = {
      * @return {Boolean}
      */
     destroy : function(){
-        delete this.viewer;
+        delete this.editor;
         return true;
     },
 
@@ -129,15 +129,15 @@ scgViewerWindow.prototype = {
         
         var self = this;
         
-        SCWeb.core.Translation.translate(this.viewer.scene.getScAddrs(), language, function(namesMap) {
+        SCWeb.core.Translation.translate(this.editor.scene.getScAddrs(), language, function(namesMap) {
             for (addr in namesMap) {
-                var obj = self.viewer.scene.getObjectByScAddr(addr);
+                var obj = self.editor.scene.getObjectByScAddr(addr);
                 if (obj) {
                     obj.text = namesMap[addr];
                 }
             }
             
-            self.viewer.render.updateTexts();
+            self.editor.render.updateTexts();
         });
 
     },

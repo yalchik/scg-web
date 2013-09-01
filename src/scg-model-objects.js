@@ -1,8 +1,8 @@
 var SCgObjectState = {
     Normal: 0,
-    Deleted: 1,
-    Merged: 2,
-    NewInMemory: 3
+    MergedWithMemory: 1,
+    NewInMemory: 2,
+    FromMemory: 3
 };
 
 var ObjectId = 0;
@@ -56,6 +56,8 @@ SCg.ModelObject = function(options) {
 
     this.edges = [];    // list of connected edges
     this.need_update = true;    // update flag
+    this.state = SCgObjectState.Normal;
+    this.is_selected = false;
 };
 
 SCg.ModelObject.prototype = {
@@ -97,6 +99,7 @@ SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
 
     for (var i = 0; i < this.edges.length; i++) {
        this.edges[i].need_update = true;
+       this.edges[i].need_observer_sync = true;
     }
 
 };
@@ -136,6 +139,21 @@ SCg.ModelObject.prototype.getConnectionPos = function(from, dotPos) {
     return new SCg.Vector3(this.position.x, this.position.y, this.position.z);
 };
 
+/*! Setup new state of object
+ * @param {SCgObjectState} state New object state
+ */
+SCg.ModelObject.prototype.setObjectState = function(state) {
+    this.state = state;
+    this.need_observer_sync = true;
+};
+
+/*!
+ * Change value of selection flag
+ */
+SCg.ModelObject.prototype._setSelected = function(value) {
+    this.is_selected = value;
+    this.need_observer_sync = true;
+};
 
 // -------------- node ---------
 
@@ -183,9 +201,9 @@ SCg.ModelEdge = function(options) {
     this.target = null;
 
     if (options.source)
-        this.source = options.source;
+        this.setSource(options.source);
     if (options.target)
-        this.target = options.target;
+        this.setTarget(options.target);
 
     this.source_pos = new SCg.Vector3(0, 0, 0); // the begin position of egde in world coordinates
     this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
@@ -197,25 +215,36 @@ SCg.ModelEdge = function(options) {
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
 
 /** 
- * Setup new begin object for sc.g-edge
+ * Setup new source object for sc.g-edge
  * @param {Object} scg_obj
- *      sc.g-object, that will be the begin of edge
+ *      sc.g-object, that will be the source of edge
  */
-SCg.ModelEdge.prototype.setBegin = function(scg_obj) {
+SCg.ModelEdge.prototype.setSource = function(scg_obj) {
+    
+    if (this.source == scg_obj) return; // do nothing
+    
+    if (this.source)
+        this.source.edges.remove(this);
     
     this.source = scg_obj;
-
+    this.source.edges.push(this);
     this.need_observer_sync = true;
 };
 
 /**
- * Setup new end object for sc.g-edge
+ * Setup new target object for sc.g-edge
  * @param {Object} scg_obj
- *      sc.g-object, that will be the end of edge
+ *      sc.g-object, that will be the target of edge
  */
- SCg.ModelEdge.prototype.setEnd = function(scg_obj) {
+ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
+     
+    if (this.target == scg_obj) return; // do nothing
+    
+    if (this.target)
+        this.target.edges.remove(this);
+    
     this.target = scg_obj;
-
+    this.target.edges.push(this);
     this.need_observer_sync = true;
  };
 

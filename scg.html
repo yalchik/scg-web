@@ -37,6 +37,7 @@
 		</style>
 		
 		<link href="css/scg.css" rel="stylesheet">
+		<link href="css/bootstrap.css" rel="stylesheet">
 	</head>
 	<body>
 
@@ -44,13 +45,17 @@
 		<script type="text/javascript" src="js/jquery/jquery-1.8.3.min.js"></script>
 		<script type="text/javascript" src="js/jquery/jquery.namespace.js"></script>
 		<script type="text/javascript" src="js/Constants.js"></script>
+		<script type="text/javascript" src="js/bootstrap.js"></script>
 		
 		<script type="text/javascript" src="scg.js"></script>
 
 		<script type="text/javascript">
 			$(document).ready(function() {
-				var viewer = new SCg.Viewer();
-				viewer.init({containerId: "scg-viewer"});
+				
+				SCgDebug.enabled = true;
+				
+				var editor = new SCg.Editor();
+				editor.init({containerId: "scg-viewer"});
 
 				var node_types = [
 					sc_type_node,
@@ -82,7 +87,7 @@
 						sc_type: node_types[i],
 						text: "Object_" + i.toString()
 					});
-					viewer.scene.appendNode(model_node);
+					editor.scene.appendNode(model_node);
 					nodes.push(model_node);
 				}
 				
@@ -129,7 +134,7 @@
 						sc_type: edge_types[i]
 					});
 
-					viewer.scene.appendEdge(model_edge);
+					editor.scene.appendEdge(model_edge);
 					edges.push(model_edge);
 				}
 				
@@ -139,18 +144,18 @@
 						sc_type: sc_type_arc_access | sc_type_arc_perm | sc_type_arc_neg | sc_type_const
 					});
 
-				viewer.scene.appendEdge(model_edge);*/
+				editor.scene.appendEdge(model_edge);*/
 				
 				// contour
 				/*var model_contour = new SCg.ModelContour({});
-				viewer.scene.appendContour(model_contour);
+				editor.scene.appendContour(model_contour);
 				for (var i = 0; i < nodes.length / 4; i++)
 				{
 					model_contour.addChild(nodes[i]);
 				}*/
 				
-				viewer.render.update();
-				viewer.scene.layout();
+				editor.render.update();
+				editor.scene.layout();
 			});
 		</script>
 		

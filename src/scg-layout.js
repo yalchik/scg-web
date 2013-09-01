@@ -75,8 +75,7 @@ SCg.LayoutAlgorithmForceBased.prototype.onLayoutTick = function() {
         var node_layout = this.nodes[idx];
         
         if (node_layout.type == SCgLayoutObjectType.Node) {
-            node_layout.object.position.x = node_layout.x;
-            node_layout.object.position.y = node_layout.y;
+            node_layout.object.setPosition(new SCg.Vector3(node_layout.x, node_layout.y, 0));
         } else
         {
             if (node_layout.type == SCgLayoutObjectType.DotPoint) {
@@ -197,5 +196,5 @@ SCg.LayoutManager.prototype.doLayout = function() {
 };
 
 SCg.LayoutManager.prototype.onTickUpdate = function() { 
-    this.scene.render.update();
+    this.scene.updateObjectsVisual();
 };
