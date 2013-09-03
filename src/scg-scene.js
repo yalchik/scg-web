@@ -12,6 +12,11 @@ var SCgEditMode = {
     }
 };
 
+var SCgModalMode = {
+    SCgModalNone: 0,
+    SCgModalIdtf: 1,
+};
+
 var KeyCode = {
     Escape: 27
 };
@@ -42,6 +47,17 @@ SCg.Scene = function(options) {
     
     // edge source and target
     this.edge_data = {source: null, target: null};
+    
+    // callback for selection changed
+    this.event_selection_changed = null;
+    // callback for modal state changes
+    this.event_modal_changed = null;
+    
+    /* Flag to lock any edit operations
+     * If this flag is true, then we doesn't need to process any editor operatons, because
+     * in that moment shows modal dialog
+     */
+    this.modal = SCgModalMode.SCgModalNone;
 };
 
 SCg.Scene.prototype = {
@@ -187,6 +203,8 @@ SCg.Scene.prototype = {
         
         this.selected_objects.push(obj);
         obj._setSelected(true);
+        
+        this._fireSelectionChanged();
     },
     
     /**
@@ -203,6 +221,8 @@ SCg.Scene.prototype = {
         
         this.selected_objects.splice(idx, 1);
         obj._setSelected(false);
+        
+        this._fireSelectionChanged();
     },
     
     /**
@@ -210,15 +230,21 @@ SCg.Scene.prototype = {
      */
     clearSelection: function() {
         
+        var need_event = this.selected_objects.length > 0;
+        
         for (idx in this.selected_objects) {
             this.selected_objects[idx]._setSelected(false);
         }
         
-        this.selected_objects.slice(0, this.selected_objects.length);
+        this.selected_objects.splice(0, this.selected_objects.length);
+        
+        if (need_event) this._fireSelectionChanged();
     },
     
     // -------- input processing -----------
     onMouseMove: function(x, y) {
+        
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         this.mouse_pos.x = x;
         this.mouse_pos.y = y;
@@ -234,12 +260,26 @@ SCg.Scene.prototype = {
     },
     
     onMouseDown: function(x, y) {
+        
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
+        
+        // append new line point
+        if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeEdge) {
+            this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
+        }
     },
     
     onMouseUp: function(x, y) {
+        
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
+        
+        if (!this.pointed_object)
+            this.clearSelection();
     },
     
     onMouseDoubleClick: function(x, y) {
+        
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             if (this.pointed_object)
@@ -253,14 +293,20 @@ SCg.Scene.prototype = {
     
     
     onMouseOverObject: function(obj) {
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
+        
         this.pointed_object = obj;
     },
     
     onMouseOutObject: function(obj) {
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
+        
         this.pointed_object = null;
     },
     
     onMouseDownObject: function(obj) {
+        
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect)
             this.focused_object = obj;
@@ -270,7 +316,7 @@ SCg.Scene.prototype = {
             // start new edge
             if (!this.edge_data.source) {
                 this.edge_data.source = obj;
-                this.drag_line_points.push([this.mouse_pos.x, this.mouse_pos.y]);
+                this.drag_line_points.push({x: this.mouse_pos.x, y: this.mouse_pos.y, idx: this.drag_line_points.length});
             } else {
                 // source and target must be not equal
                 if (this.edge_data.source != obj) {
@@ -288,6 +334,7 @@ SCg.Scene.prototype = {
     },
     
     onMouseUpObject: function(obj) {
+        if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             if (obj == this.focused_object) {
@@ -302,14 +349,24 @@ SCg.Scene.prototype = {
     
     onKeyDown: function(key_code) {
         
+        if (this.modal != SCgModalMode.SCgModalNone) return false; // do nothing
+        
         // revert changes on escape key
         if (key_code == KeyCode.Escape) {
             if (this.edit_mode == SCgEditMode.SCgModeEdge)
+            {
                 this.resetEdgeMode();
+                return true;
+            }
         }
+        
+        return false;
     },
     
     onKeyUp: function(key_code) {
+        if (this.modal != SCgModalMode.SCgModalNone) return false; // do nothing
+        
+        return false;
     },
     
     // -------- edit --------------
@@ -329,6 +386,14 @@ SCg.Scene.prototype = {
         this.resetEdgeMode();
     },
     
+    /** 
+     * Changes modal state of scene. Just for internal usage
+     */
+    setModal: function(value) {
+        this.modal = value;
+        this._fireModalChanged();
+    },
+    
     /**
      * Reset edge creation mode state
      */
@@ -337,5 +402,34 @@ SCg.Scene.prototype = {
         this.render.updateDragLine();
         
         this.edge_data.source = this.edge_data.target = null;
+    },
+    
+    /**
+     * Revert drag line to specified point. All drag point with index >= idx will be removed
+     * @param {Integer} idx Index of drag point to revert.
+     */
+    revertDragPoint: function(idx) {
+        if (this.edit_mode != SCgEditMode.SCgModeEdge) {
+            SCgDebug.error('Work with drag point in incorrect edit mode');
+            return;
+        }
+        
+        this.drag_line_points.splice(idx, this.drag_line_points.length - idx);
+        
+        if (this.drag_line_points.length == 0) {
+            this.edge_data.source = this.edge_data.target = null;
+        }
+        this.render.updateDragLine();
+    },
+        
+    // ------------- events -------------
+    _fireSelectionChanged: function() {
+        if (this.event_selection_changed)
+            this.event_selection_changed();
+    },
+    
+    _fireModalChanged: function() {
+        if (this.event_modal_changed)
+            this.event_modal_changed();
     }
 };

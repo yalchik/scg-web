@@ -1,3 +1,6 @@
+
+// ------------------------------
+
 SCg.Widget = function(postition, size) {
 }
 
