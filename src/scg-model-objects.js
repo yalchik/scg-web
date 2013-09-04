@@ -67,6 +67,12 @@ SCg.ModelObject.prototype = {
 };
 
 /**
+ * Destroy object
+ */
+SCg.ModelObject.prototype.destroy = function() {
+};
+
+/**
  * Setup new position of object
  * @param {SCg.Vector3} pos
  *      New position of object
@@ -90,6 +96,15 @@ SCg.ModelObject.prototype.setScale = function(scale) {
 
     this.requestUpdate();
     this.update();
+};
+
+/**
+ * Setup new text value
+ * @param {String} text New text value
+ */
+SCg.ModelObject.prototype.setText = function(text) {
+    this.text = text;
+    this.need_observer_sync = true;
 };
 
 /**
@@ -155,6 +170,20 @@ SCg.ModelObject.prototype._setSelected = function(value) {
     this.need_observer_sync = true;
 };
 
+/**
+ * Remove edge from edges list
+ */
+SCg.ModelObject.prototype.removeEdge = function(edge) {
+    var idx = this.edges.indexOf(edge);
+    
+    if (idx < 0) {
+        SCg.error("Something wrong in edges deletion");
+        return;
+    }
+    
+    this.edges.splice(idx, 1);
+};
+
 // -------------- node ---------
 
 /**
@@ -214,6 +243,18 @@ SCg.ModelEdge = function(options) {
 
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
 
+/**
+ * Destroy object
+ */
+SCg.ModelEdge.prototype.destroy = function() {
+    SCg.ModelObject.prototype.destroy.call(this);
+    
+    if (this.target)
+        this.target.removeEdge(this);
+    if (this.source)
+        this.source.removeEdge(this);
+};
+
 /** 
  * Setup new source object for sc.g-edge
  * @param {Object} scg_obj
@@ -224,7 +265,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
     if (this.source == scg_obj) return; // do nothing
     
     if (this.source)
-        this.source.edges.remove(this);
+        this.source.removeEdge(this);
     
     this.source = scg_obj;
     this.source.edges.push(this);
@@ -241,7 +282,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
     if (this.target == scg_obj) return; // do nothing
     
     if (this.target)
-        this.target.edges.remove(this);
+        this.target.removeEdge(this);
     
     this.target = scg_obj;
     this.target.edges.push(this);

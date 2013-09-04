@@ -52,12 +52,51 @@ SCg.Editor.prototype = {
             });
             cont.find('#scg-tool-change-idtf').click(function() {
                 self.scene.setModal(SCgModalMode.SCgModalIdtf);
+                $(this).popover({container: container});
                 $(this).popover('show');
+                
+                var tool = $(this);
+                
+                function stop_modal() {
+                    self.scene.setModal(SCgModalMode.SCgModalNone);
+                    tool.popover('destroy');
+                    self.scene.updateObjectsVisual();
+                }
+                
+                
+                var input = $(container + ' #scg-change-idtf-input');
+                // setup initial value
+                input.focus().val(self.scene.selected_objects[0].text);
+                input.keypress(function (e) {
+                    if (e.keyCode == KeyCode.Enter || e.keyCode == KeyCode.Escape) {
+                        
+                        if (e.keyCode == KeyCode.Enter)   self.scene.selected_objects[0].setText(input.val());
+                        stop_modal();
+                        e.preventDefault();
+                    } 
+                    
+                });
+                
+                // process controls
+                $(container + ' #scg-change-idtf-apply').click(function() {
+                    self.scene.selected_objects[0].setText(input.val());
+                    stop_modal();
+                });
+                $(container + ' #scg-change-idtf-cancel').click(function() {
+                    stop_modal();
+                });
+                
+            });
+            
+            cont.find('#scg-tool-delete').click(function() {
+                self.scene.deleteObjects(self.scene.selected_objects.slice(0, self.scene.selected_objects.length));
+                self.scene.clearSelection();
             });
             
             // initial update
-            self.onSelectionChanged();
             self.onModalChanged();
+            self.onSelectionChanged();
+            
         });
         
         var self = this;
@@ -80,6 +119,12 @@ SCg.Editor.prototype = {
         } else {
             this._disableTool('#scg-tool-change-idtf');
         }
+        
+        if (this.scene.selected_objects.length > 0) {
+            this._enableTool('#scg-tool-delete');
+        } else {
+            this._disableTool('#scg-tool-delete');
+        }
     },
     
     /**
@@ -100,10 +145,10 @@ SCg.Editor.prototype = {
         update_tool('#scg-tool-contour');
 
         update_tool('#scg-tool-change-idtf');
+        update_tool('#scg-tool-delete');
         update_tool('#scg-tool-zoomin');
         update_tool('#scg-tool-zoomout');
-    }, 
-    
+    },
     
     // -------------------------------- Helpers ------------------
     /**

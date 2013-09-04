@@ -18,7 +18,8 @@ var SCgModalMode = {
 };
 
 var KeyCode = {
-    Escape: 27
+    Escape: 27,
+    Enter: 13
 };
 
 SCg.Scene = function(options) {
@@ -97,7 +98,34 @@ SCg.Scene.prototype = {
         this.contours.push(contour);
         if (contour.sc_addr)
             this.objects[contour.sc_addr] = contour;
-    },  
+    },
+    
+    /**
+     * Remove object from scene.
+     * @param {SCg.ModelObject} obj Object to remove
+     */
+    removeObject: function(obj) {
+        function remove_from_list(obj, list) {
+            var idx = list.indexOf(obj);
+            if (idx < 0) {
+                SCg.error("Can't find object for remove");
+                return;
+            }
+            
+            list.splice(idx, 1);
+        }
+        
+        if (obj instanceof SCg.ModelNode) {
+            remove_from_list(obj, this.nodes);
+        } else if (obj instanceof SCg.ModelEdge) {
+            remove_from_list(obj, this.edges);
+        } else if (obj instanceof SCg.ModeContour) {
+            remove_from_list(obj, this.contours);
+        }
+        
+        if (obj.sc_addr)
+            delete this.objects[obj.sc_addr];
+    },
 
     // --------- objects create/destroy -------
     /**
@@ -137,6 +165,38 @@ SCg.Scene.prototype = {
         this.appendEdge(edge);
         
         return edge;
+    },
+    
+    /**
+     * Delete objects from scene
+     * @param {Array} objects Array of sc.g-objects to delete
+     */
+    deleteObjects: function(objects) {
+        
+        function collect_objects(container, root) {
+            if (container.indexOf(root) >= 0)
+                return;
+            
+            container.push(root);
+            for (idx in root.edges) {
+                collect_objects(container, root.edges[idx]);
+            }
+        }
+        
+        // collect objects for remove
+        var objs = [];
+        
+        // collect objects for deletion
+        for (idx in objects)
+            collect_objects(objs, objects[idx]);
+        
+        // delete objects
+        for (idx in objs) {
+            this.removeObject(objs[idx]);
+            objs[idx].destroy();
+        }
+        
+        this.updateRender();
     },
     
     /**

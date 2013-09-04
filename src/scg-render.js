@@ -133,6 +133,8 @@ SCg.Render.prototype = {
             .attr('y', function(d) { return d.scale.y / 1.3; })
             .text(function(d) { return d.text; });
             
+        this.d3_nodes.exit().remove();
+            
         // update edges visual
         this.d3_edges = this.d3_edges.data(this.scene.edges, function(d) { return d.id; });
         
@@ -156,7 +158,8 @@ SCg.Render.prototype = {
             .each(function(d) {
                 SCgAlphabet.updateEdge(d, d3.select(this));
             });
-            
+        
+        this.d3_edges.exit().remove();
             
         // update contours visual
         this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
@@ -164,6 +167,7 @@ SCg.Render.prototype = {
         g = this.d3_contours.enter().append('svg:path')
                                     .attr('d', d3.svg.line().interpolate('cardinal-closed'))
                                     .attr('class', 'SCgContour');
+        this.d3_contours.exit().remove();
         
         this.updateObjects();
     },
@@ -178,7 +182,8 @@ SCg.Render.prototype = {
             d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
                     .classed('SCgStateSelected', function(d) {
                         return d.is_selected;
-                    });
+                    }).select('text')
+                    .text(function(d) { return d.text; });;
         });
         
         this.d3_edges.each(function(d) {
