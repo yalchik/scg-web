@@ -59,15 +59,15 @@ scgViewerWindow.prototype = {
             
             if (elements.hasOwnProperty(el.id))
                 continue;
+                
+            if (this.editor.scene.objects.hasOwnProperty(el.id)) {
+                elements[el.id] = this.editor.scene.objects[el.id];
+                continue;
+            }
             
             if (el.el_type & sc_type_node || el.el_type & sc_type_link) {
-                var model_node = new SCg.ModelNode({ 
-                        position: new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), //1000 * Math.random() - 500), 
-                        sc_type: el.el_type,
-                        text: "",
-                        sc_addr: el.id
-                    });
-                this.editor.scene.appendNode(model_node);
+                var model_node = this.editor.scene.createNode(el.el_type, new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), '');
+                model_node.setScAddr(el.id);
                 
                 elements[el.id] = model_node;
             } else if (el.el_type & sc_type_arc_mask) {
@@ -91,14 +91,8 @@ scgViewerWindow.prototype = {
                     founded = true;
                     edges.splice(idx, 1);
                     
-                    var model_edge = new SCg.ModelEdge({
-                        source: beginNode,
-                        target: endNode,
-                        sc_type: obj.el_type,
-                        sc_addr: obj.id
-                    });
-
-                    this.editor.scene.appendEdge(model_edge);
+                    var model_edge = this.editor.scene.createEdge(beginNode, endNode, obj.el_type);
+                    model_edge.setScAddr(obj.id);
                     
                     elements[obj.id] = model_edge;
                 } 

@@ -76,6 +76,7 @@ SCg.Scene.prototype = {
      */
     appendNode: function(node) {
         this.nodes.push(node);
+        node.scene = this;
         if (node.sc_addr)
             this.objects[node.sc_addr] = node;
     },
@@ -86,6 +87,7 @@ SCg.Scene.prototype = {
      */
     appendEdge: function(edge) {
         this.edges.push(edge);
+        edge.scene = this;
         if (edge.sc_addr)
             this.objects[edge.sc_addr] = edge;
     },
@@ -96,6 +98,7 @@ SCg.Scene.prototype = {
      */
     appendContour: function(contour) {
         this.contours.push(contour);
+        contour.scene = this;
         if (contour.sc_addr)
             this.objects[contour.sc_addr] = contour;
     },
@@ -138,7 +141,7 @@ SCg.Scene.prototype = {
      */
     createNode: function(sc_type, pos, text) {
         var node = new SCg.ModelNode({ 
-                        position: new SCg.Vector3(pos.x, pos.y, pos.z), 
+                        position: pos.clone(), 
                         scale: new SCg.Vector2(20, 20),
                         sc_type: sc_type,
                         text: text

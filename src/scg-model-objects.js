@@ -58,6 +58,7 @@ SCg.ModelObject = function(options) {
     this.need_update = true;    // update flag
     this.state = SCgObjectState.Normal;
     this.is_selected = false;
+    this.scene = null;
 };
 
 SCg.ModelObject.prototype = {
@@ -183,6 +184,21 @@ SCg.ModelObject.prototype.removeEdge = function(edge) {
     
     this.edges.splice(idx, 1);
 };
+
+/**
+ * Setup new sc-addr of object
+ */
+SCg.ModelObject.prototype.setScAddr = function(addr) {
+    
+    // remove old sc-addr from map
+    if (this.sc_addr && this.scene.objects.hasOwnPropery(this.sc_addr)) {
+        delete this.scene.objects[this.sc_addr];
+    }
+    this.sc_addr = addr;
+    //! @todo update state
+    if (this.sc_addr)
+        this.scene.objects[this.sc_addr] = this;
+}
 
 // -------------- node ---------
 
