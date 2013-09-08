@@ -383,6 +383,11 @@ SCg.Scene.prototype = {
                 // source and target must be not equal
                 if (this.edge_data.source != obj) {
                     var edge = this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
+                    
+                    var mouse_pos = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
+                    edge.setSourceDot(this.edge_data.source.calculateDotPos(mouse_pos));
+                    edge.setTargetDot(obj.calculateDotPos(mouse_pos));
+                    
                     if (this.drag_line_points.length > 1) {
                         edge.setPoints(this.drag_line_points.slice(1));
                     }

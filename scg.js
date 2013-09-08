@@ -184,98 +184,173 @@ var SCgDebug = {
 
 /* --- scg-math.js --- */
 SCg.Vector2 = function(x, y) {
-	this.x = x;
-	this.y = y;
+    this.x = x;
+    this.y = y;
 };
 
 SCg.Vector2.prototype = {
-	constructor: SCg.Vector2,
-	
-	copyFrom: function(other) {
-		this.x = ohter.x;
-		this.y = other.y;
-		
-		return this;
-	},
-	
-	clone: function() {
-		return new SCg.Vector2(this.x, this.y);
-	}
+    constructor: SCg.Vector2,
+    
+    copyFrom: function(other) {
+        this.x = ohter.x;
+        this.y = other.y;
+        
+        return this;
+    },
+    
+    clone: function() {
+        return new SCg.Vector2(this.x, this.y);
+    },
+    
+    add: function(other) {
+        this.x += other.x;
+        this.y += other.y;
+        return this;
+    },
+    
+    sub: function(other) {
+        this.x -= other.x;
+        this.y -= other.y;
+        return this;
+    },
+    
+    mul: function(other) {
+        this.x *= other.x;
+        this.y *= other.y;
+        return this;
+    },
+    
+    div: function(other) {
+        this.x /= other.x;
+        this.y /= other.y;
+        return this;
+    },
+    
+    multiplyScalar: function(v) {
+        this.x *= v;
+        this.y *= v;
+        return this;
+    },
+    
+    divideScalar: function(v) {
+        this.x /= v;
+        this.y /= v;
+        return this;
+    },
+    
+    length: function() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    },
+    
+    lengthSquared: function() {
+        return this.x * this.x + this.y * this.y;
+    },
+    
+    normalize: function() {
+        return this.divideScalar(this.length());
+    },
+    
+    dotProduct: function(other) {
+        return this.x * other.x + this.y * other.y;
+    },
+    
+    crossProduct: function(other) {
+        return this.x * other.y - this.y * other.x;
+    }
 };
 
 
 // --------------------
 SCg.Vector3 = function(x, y, z) {
-	this.x = x;
-	this.y = y;
-	this.z = z;
+    this.x = x;
+    this.y = y;
+    this.z = z;
 };
 
 SCg.Vector3.prototype = {
-	constructor: SCg.Vector3,
-	
-	copyFrom: function(other) {
-		this.x = other.x;
-		this.y = other.y;
-		this.z = other.z;
-		
-		return this;
-	},
-	
-	clone: function() {
-		return new SCg.Vector3(this.x, this.y, this.z);
-	},
-	
-	sub: function(other) {
-		this.x -= other.x;
-		this.y -= other.y;
-		this.z -= other.z;
-		
-		return this;
-	},
-	
-	add: function(other) {
-		this.x += other.x;
-		this.y += other.y;
-		this.z += other.z;
-		
-		return this;
-	},
-	
-	mul: function(other) {
-		this.x *= other.x;
-		this.y *= other.y;
-		this.z *= other.z;
-		
-		return this;
-	},
-	
-	div: function(other) {
-		this.x /= other.x;
-		this.y /= other.y;
-		this.z /= other.z;
-		
-		return this;
-	},
-	
-	multiplyScalar: function(v) {
-		this.x *= v;
-		this.y *= v;
-		this.z *= v;
-		
-		return this;
-	},
-	
-	normalize: function() {
-		var l = this.length();
-		this.x /= l;
-		this.y /= l;
-		this.z /= l;
-	},
-	
-	length: function() {
-		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
-	}
+    constructor: SCg.Vector3,
+    
+    copyFrom: function(other) {
+        this.x = other.x;
+        this.y = other.y;
+        this.z = other.z;
+        
+        return this;
+    },
+    
+    clone: function() {
+        return new SCg.Vector3(this.x, this.y, this.z);
+    },
+    
+    sub: function(other) {
+        this.x -= other.x;
+        this.y -= other.y;
+        this.z -= other.z;
+        
+        return this;
+    },
+    
+    add: function(other) {
+        this.x += other.x;
+        this.y += other.y;
+        this.z += other.z;
+        
+        return this;
+    },
+    
+    mul: function(other) {
+        this.x *= other.x;
+        this.y *= other.y;
+        this.z *= other.z;
+        
+        return this;
+    },
+    
+    div: function(other) {
+        this.x /= other.x;
+        this.y /= other.y;
+        this.z /= other.z;
+        
+        return this;
+    },
+    
+    multiplyScalar: function(v) {
+        this.x *= v;
+        this.y *= v;
+        this.z *= v;
+        
+        return this;
+    },
+    
+    normalize: function() {
+        var l = this.length();
+        this.x /= l;
+        this.y /= l;
+        this.z /= l;
+    },
+    
+    length: function() {
+        return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    },
+    
+    lengthSquared: function() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    },
+    
+    dotProduct: function(other) {
+        return this.x * other.x + this.y * other.y + this.z * other.z;
+    },
+    
+    crossProduct: function(other) {
+        return new SCg.Vector3(
+                this.y * other.z - this.z * other.y,
+                this.z * other.x - this.x * other.z,
+                this.x * other.y - this.y * other.x);
+    },
+    
+    to2d: function() {
+        return new SCg.Vector2(this.x, this.y);
+    }
 };
 
 
@@ -434,7 +509,14 @@ SCg.ModelObject.prototype.update = function() {
  * @returns Returns position of connection point (new instance of SCg.Vector3, that can be modified later)
  */
 SCg.ModelObject.prototype.getConnectionPos = function(from, dotPos) {
-    return new SCg.Vector3(this.position.x, this.position.y, this.position.z);
+    return this.position.clone();
+};
+
+/*! Calculates dot position on object, for specified coordinates in scene
+ * @param {SCg.Vector2} pos Position in scene to calculate dot position
+ */
+SCg.ModelObject.prototype.calculateDotPos = function(pos) {
+    return 0;
 };
 
 /*! Setup new state of object
@@ -574,6 +656,14 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
 };
 
 /**
+ * Setup new value of source dot position
+ */
+SCg.ModelEdge.prototype.setSourceDot = function(dot) {
+    this.source_dot = dot;
+    this.need_observer_sync = true;
+};
+
+/**
  * Setup new target object for sc.g-edge
  * @param {Object} scg_obj
  *      sc.g-object, that will be the target of edge
@@ -590,6 +680,14 @@ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
     this.need_observer_sync = true;
 };
 
+/**
+ * Setup new value of target dot position
+ */
+SCg.ModelEdge.prototype.setTargetDot = function(dot) {
+    this.target_dot = dot;
+    this.need_observer_sync = true;
+};
+
 SCg.ModelEdge.prototype.update = function() {
     SCg.ModelObject.prototype.update.call(this);
 
@@ -598,8 +696,8 @@ SCg.ModelEdge.prototype.update = function() {
         this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
         this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
     } else {
-        this.source_pos = this.source.getConnectionPos(this.target.position, 0);
-        this.target_pos = this.target.getConnectionPos(this.source.position, 0);
+        this.source_pos = this.source.getConnectionPos(this.target.position, this.source_dot);
+        this.target_pos = this.target.getConnectionPos(this.source.position, this.target_dot);
     }
 
     this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
@@ -618,6 +716,92 @@ SCg.ModelEdge.prototype.setPoints = function(points) {
     this.points = points;
     this.need_observer_sync = true;
     this.requestUpdate();
+};
+
+SCg.ModelEdge.prototype.getConnectionPos = function(from, dotPos) {
+    
+    // first of all we need to determine sector an it relative position
+    var sector = Math.floor(dotPos);
+    var sector_pos = dotPos - sector;
+    
+    // now we need to determine, if sector is correct (in sector bounds)
+    if ((sector < 0) || (sector > this.points.length + 1)) {
+        sector = this.points.length / 2;
+    }
+    
+    var beg_pos, end_pos;
+    if (sector == 0) {
+        beg_pos = this.source_pos;
+        if (this.points.length > 0)
+            end_pos = new SCg.Vector3(this.points[0].x, this.points[0].y, 0);
+        else
+            end_pos = this.target_pos;
+    } else if (sector == this.points.length) {
+        end_pos = this.target_pos;
+        if (this.points.length > 0) 
+            beg_pos = new SCg.Vector3(this.points[sector - 1].x, this.points[sector - 1].y, 0);
+        else
+            beg_pos = this.source_pos;
+    } else {
+        beg_pos = new SCg.Vector3(this.points[sector - 1].x, this.points[sector - 1].y, 0);
+        end_pos = new SCg.Vector3(this.points[sector].x, this.points[sector].y, 0);
+    }
+        
+    var l_pt = new SCg.Vector3(0, 0, 0);
+    
+    l_pt.copyFrom(beg_pos).sub(end_pos);
+    l_pt.multiplyScalar(1 - sector_pos).add(end_pos);
+    
+    var result = new SCg.Vector3(0, 0, 0);
+    result.copyFrom(from).sub(l_pt).normalize();
+    result.multiplyScalar(10).add(l_pt);
+    
+    return result;
+}
+
+SCg.ModelEdge.prototype.calculateDotPos = function(pos) {
+    
+    var pts = [this.source_pos.to2d()];
+    for (idx in this.points)
+        pts.push(new SCg.Vector2(this.points[idx].x, this.points[idx].y));
+    pts.push(this.target_pos.to2d());
+    
+    var minDist = -1.0;
+    var result = 0.0;
+    
+    for (var i = 1; i < pts.length; i++) {
+        var p1 = pts[i - 1];
+        var p2 = pts[i];
+
+        var v = p2.clone().sub(p1);
+        var vp = pos.clone().sub(p1);
+
+        var vn = v.clone().normalize();
+
+        // calculate point on line
+        var p = p1.clone().add(vn.clone().multiplyScalar(vn.clone().dotProduct(vp)));
+        
+        if (v.length() == 0)
+            return result;
+            
+        var dotPos = p.clone().sub(p1).length() / v.length();
+
+        if (dotPos < 0 || dotPos > 1)
+            continue;
+
+        // we doesn't need to get real length, because we need minimum
+        // so we get squared length to make that procedure faster
+        var d = pos.clone().sub(p).lengthSquared();
+
+        // compare with minimum distance
+        if (minDist < 0 || minDist > d)
+        {
+            minDist = d;
+            result = (i - 1) + dotPos;
+        }
+    }
+    
+    return result;
 };
  
  //---------------- contour ----------------
@@ -1714,6 +1898,11 @@ SCg.Scene.prototype = {
                 // source and target must be not equal
                 if (this.edge_data.source != obj) {
                     var edge = this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
+                    
+                    var mouse_pos = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
+                    edge.setSourceDot(this.edge_data.source.calculateDotPos(mouse_pos));
+                    edge.setTargetDot(obj.calculateDotPos(mouse_pos));
+                    
                     if (this.drag_line_points.length > 1) {
                         edge.setPoints(this.drag_line_points.slice(1));
                     }
