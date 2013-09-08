@@ -10,14 +10,13 @@ sources = [
         'scg.js',
         'scg-debug.js',
         'scg-math.js',
-        'scg-model.js',
         'scg-model-objects.js',
         'scg-alphabet.js',
         'scg-render.js',
         #'scg-render-objects.js',
         'scg-scene.js',
         'scg-layout.js',
-        'scg-component.js'
+        #'scg-component.js'
         ]
 
 def create_file(source_dir, target_file_path):

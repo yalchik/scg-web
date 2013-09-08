@@ -214,14 +214,23 @@ var SCgAlphabet = {
         
         // if we have an arrow, then need to fix end position
         if (has_marker) {
-            var dv = pos_trg.clone().sub(pos_src);
+            var prev_pos = pos_src;
+            if (edge.points.length > 0) {
+                prev_pos = new SCg.Vector3(edge.points[edge.points.length - 1].x, edge.points[edge.points.length - 1].y, 0);
+            }
+            
+            var dv = pos_trg.clone().sub(prev_pos);
             var len = dv.length();
             dv.normalize();
-            pos_trg = pos_src.clone().add(dv.multiplyScalar(len - 10));
+            pos_trg = prev_pos.clone().add(dv.multiplyScalar(len - 10));
         }
         
         // make position path
-        var position_path = 'M' + pos_src.x + ',' + pos_src.y + 'L' + pos_trg.x + ',' + pos_trg.y;
+        var position_path = 'M' + pos_src.x + ',' + pos_src.y;
+        for (idx in edge.points) {
+            position_path += 'L' + edge.points[idx].x + ',' + edge.points[idx].y;
+        }
+        position_path += 'L' + pos_trg.x + ',' + pos_trg.y;
         
         var sc_type_str = edge.sc_type.toString();
         if (d3_group['sc_type'] != sc_type_str) {

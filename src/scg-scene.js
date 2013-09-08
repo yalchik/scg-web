@@ -327,7 +327,7 @@ SCg.Scene.prototype = {
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         // append new line point
-        if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeEdge) {
+        if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeEdge && this.edge_data.source) {
             this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
         }
     },
@@ -351,7 +351,6 @@ SCg.Scene.prototype = {
             this.createNode(sc_type_node | sc_type_const, new SCg.Vector3(x, y, 0), '');
             this.updateRender();
         }
-        
     },
     
     
@@ -383,7 +382,10 @@ SCg.Scene.prototype = {
             } else {
                 // source and target must be not equal
                 if (this.edge_data.source != obj) {
-                    this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
+                    var edge = this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
+                    if (this.drag_line_points.length > 1) {
+                        edge.setPoints(this.drag_line_points.slice(1));
+                    }
                     this.edge_data.source = this.edge_data.target = null;
                     
                     this.drag_line_points.splice(0, this.drag_line_points.length);

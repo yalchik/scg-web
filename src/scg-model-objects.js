@@ -252,6 +252,9 @@ SCg.ModelEdge = function(options) {
 
     this.source_pos = new SCg.Vector3(0, 0, 0); // the begin position of egde in world coordinates
     this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
+    this.points = [];
+    this.source_dot = 0.5;
+    this.target_dot = 0.5;
 
     this.requestUpdate();
     this.update();
@@ -293,7 +296,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
  * @param {Object} scg_obj
  *      sc.g-object, that will be the target of edge
  */
- SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
+SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
      
     if (this.target == scg_obj) return; // do nothing
     
@@ -303,23 +306,37 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
     this.target = scg_obj;
     this.target.edges.push(this);
     this.need_observer_sync = true;
- };
+};
 
- SCg.ModelEdge.prototype.update = function() {
+SCg.ModelEdge.prototype.update = function() {
     SCg.ModelObject.prototype.update.call(this);
 
     // calculate begin and end positions
-    this.source_pos = this.source.getConnectionPos(this.target.position, 0);
-    this.target_pos = this.target.getConnectionPos(this.source.position, 0);
+    if (this.points.length > 0) {
+        this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
+        this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+    } else {
+        this.source_pos = this.source.getConnectionPos(this.target.position, 0);
+        this.target_pos = this.target.getConnectionPos(this.source.position, 0);
+    }
 
     this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
- };
+};
  
- /*! Checks if this edge need to be drawen with arrow at the end
-  */
- SCg.ModelEdge.prototype.hasArrow = function() {
-    return this.sc_type & (sc_type_arc_common | sc_type_arc_access);
- };
+/*! Checks if this edge need to be drawen with arrow at the end
+ */
+SCg.ModelEdge.prototype.hasArrow = function() {
+   return this.sc_type & (sc_type_arc_common | sc_type_arc_access);
+};
+ 
+/*!
+ * Setup new points for edge
+ */
+SCg.ModelEdge.prototype.setPoints = function(points) {
+    this.points = points;
+    this.need_observer_sync = true;
+    this.requestUpdate();
+};
  
  //---------------- contour ----------------
  /**

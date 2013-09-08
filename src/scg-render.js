@@ -10,7 +10,7 @@ SCg.Render.prototype = {
         this.containerId = params.containerId;
         this.d3_drawer = d3.select('#' + this.containerId).append("svg:svg").attr("pointer-events", "all").attr("width", '100%').attr("height", '100%');
         
-        d3.select('#' + this.containerId).attr('style', 'disbplay: block');
+        d3.select('#' + this.containerId).attr('style', 'display: block');
         
         var self = this;
         this.d3_container = this.d3_drawer.append('svg:g')
@@ -141,6 +141,7 @@ SCg.Render.prototype = {
         // add edges that haven't visual
         this.d3_edges.enter().append('svg:g')
             .classed('SCgStateNormal', true)
+            .attr('pointer-events', 'visibleStroke')
             .on('mouseover', function(d) {
                 d3.select(this).classed('SCgStateHighlighted', true);
                 self.scene.onMouseOverObject(d);
@@ -193,7 +194,11 @@ SCg.Render.prototype = {
             
             if (d.need_update)
                 d.update();
-            SCgAlphabet.updateEdge(d, d3.select(this));
+            var d3_edge = d3.select(this);
+            SCgAlphabet.updateEdge(d, d3_edge);
+            d3_edge.classed('SCgStateSelected', function(d) {
+                return d.is_selected;
+            });
         });
                 
         this.d3_contours.each(function(d) {
