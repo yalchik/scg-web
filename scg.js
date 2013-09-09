@@ -614,14 +614,14 @@ SCg.ModelEdge = function(options) {
     if (options.target)
         this.setTarget(options.target);
 
-    this.source_pos = new SCg.Vector3(0, 0, 0); // the begin position of egde in world coordinates
-    this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
+    this.source_pos = null; // the begin position of egde in world coordinates
+    this.target_pos = null; // the end position of edge in world coordinates
     this.points = [];
     this.source_dot = 0.5;
     this.target_dot = 0.5;
 
-    this.requestUpdate();
-    this.update();
+    //this.requestUpdate();
+    //this.update();
 };
 
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
@@ -653,6 +653,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
     this.source = scg_obj;
     this.source.edges.push(this);
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -661,6 +662,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
 SCg.ModelEdge.prototype.setSourceDot = function(dot) {
     this.source_dot = dot;
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -678,6 +680,7 @@ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
     this.target = scg_obj;
     this.target.edges.push(this);
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -686,18 +689,37 @@ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
 SCg.ModelEdge.prototype.setTargetDot = function(dot) {
     this.target_dot = dot;
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 SCg.ModelEdge.prototype.update = function() {
     SCg.ModelObject.prototype.update.call(this);
 
+    if (!this.source_pos)
+        this.source_pos = this.source.position.clone();
+    if (!this.target_pos)
+        this.target_pos = this.target.position.clone();
+
     // calculate begin and end positions
     if (this.points.length > 0) {
-        this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
-        this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+        
+        if (this.source instanceof SCg.ModelEdge) {
+            this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
+            this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+        } else {
+            this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+            this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
+        }
+        
     } else {
-        this.source_pos = this.source.getConnectionPos(this.target.position, this.source_dot);
-        this.target_pos = this.target.getConnectionPos(this.source.position, this.target_dot);
+        
+        if (this.source instanceof SCg.ModelEdge) {
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+            this.target_pos = this.target.getConnectionPos(this.source_pos, this.target_dot);
+        } else {
+            this.target_pos = this.target.getConnectionPos(this.source_pos, this.target_dot);
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+        }
     }
 
     this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
@@ -1345,10 +1367,10 @@ SCg.Render.prototype = {
             })
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
-            })
-            .each(function(d) {
-                SCgAlphabet.updateEdge(d, d3.select(this));
             });
+            /*.each(function(d) {
+                SCgAlphabet.updateEdge(d, d3.select(this));
+            });*/
         
         this.d3_edges.exit().remove();
             
@@ -2221,5 +2243,168 @@ SCg.LayoutManager.prototype.doLayout = function() {
 SCg.LayoutManager.prototype.onTickUpdate = function() { 
     this.scene.updateObjectsVisual();
 };
+
+
+/* --- scg-component.js --- */
+SCgComponent = {
+    type: 0,
+    outputLang: 'hypermedia_format_scg_json',
+    formats: [],
+    factory: function(config) {
+        return new scgViewerWindow(config);
+    }
+};
+
+/**
+ * scgViewerWindow
+ * @param config
+ * @constructor
+ */
+var scgViewerWindow = function(config){
+    this._initWindow(config);
+};
+
+scgViewerWindow.prototype = {
+
+    /**
+     * scgViewer Window init
+     * @param config
+     * @private
+     */
+    _initWindow : function(config){
+
+        /**
+         * Container for render graph
+         * @type {String}
+         */
+        this.domContainer = config.container;
+
+        this.editor = new SCg.Editor();
+        this.editor.init({containerId: config.container});
+    },
+
+    /**
+     * Set new data in viewer
+     * @param {Object} data
+     */
+    receiveData : function(data){
+        
+        this._buildGraph(data);
+    },
+
+    /**
+     * Build scGraph from JSON
+     * @param {Object} data
+     * @return {scGraph}
+     * @private
+     */
+    _buildGraph : function(data){
+        
+        var elements = {};
+        var edges = new Array();
+        for (var i = 0; i < data.length; i++) {
+            var el = data[i];
+            
+            if (elements.hasOwnProperty(el.id))
+                continue;
+                
+            if (this.editor.scene.objects.hasOwnProperty(el.id)) {
+                elements[el.id] = this.editor.scene.objects[el.id];
+                continue;
+            }
+            
+            if (el.el_type & sc_type_node || el.el_type & sc_type_link) {
+                var model_node = this.editor.scene.createNode(el.el_type, new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), '');
+                model_node.setScAddr(el.id);
+                
+                elements[el.id] = model_node;
+            } else if (el.el_type & sc_type_arc_mask) {
+                edges.push(el);
+            }
+        }
+        
+        // create edges
+        var founded = true;
+        while (edges.length > 0 && founded) {
+            founded = false;
+            for (idx in edges) {
+                var obj = edges[idx];
+                var beginId = obj.begin;
+                var endId = obj.end;
+                // try to get begin and end object for arc
+                if (elements.hasOwnProperty(beginId) && elements.hasOwnProperty(endId)) {
+                    var beginNode = elements[beginId];
+                    var endNode = elements[endId];
+                    
+                    founded = true;
+                    edges.splice(idx, 1);
+                    
+                    var model_edge = this.editor.scene.createEdge(beginNode, endNode, obj.el_type);
+                    model_edge.setScAddr(obj.id);
+                    
+                    elements[obj.id] = model_edge;
+                } 
+            }
+        }
+        
+        if (edges.length > 0)
+            alert("error");
+        
+        this.editor.render.update();
+        this.editor.scene.layout();
+    },
+
+    /**
+     * Destroy window
+     * @return {Boolean}
+     */
+    destroy : function(){
+        delete this.editor;
+        return true;
+    },
+
+
+    /**
+     * Emit translate identifiers
+     */
+    translateIdentifiers    : function(language){
+        
+        var self = this;
+        
+        SCWeb.core.Translation.translate(this.editor.scene.getScAddrs(), language, function(namesMap) {
+            for (addr in namesMap) {
+                var obj = self.editor.scene.getObjectByScAddr(addr);
+                if (obj) {
+                    obj.text = namesMap[addr];
+                }
+            }
+            
+            self.editor.render.updateTexts();
+        });
+
+    },
+
+    /**
+     * Get current language in viewer
+     * @return String
+     */
+    getIdentifiersLanguage  : function(){
+        return this._currentLanguage;
+    },
+
+    _getObjectsForTranslate : function(){      
+        return [];
+    },
+
+    _translateObjects       : function(namesMap){
+
+    }
+
+};
+
+
+SCWeb.core.ComponentManager.appendComponentInitialize(function() {
+    SCWeb.core.ComponentManager.registerComponent(SCgComponent);
+});
 
 

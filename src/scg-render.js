@@ -155,10 +155,10 @@ SCg.Render.prototype = {
             })
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
-            })
-            .each(function(d) {
-                SCgAlphabet.updateEdge(d, d3.select(this));
             });
+            /*.each(function(d) {
+                SCgAlphabet.updateEdge(d, d3.select(this));
+            });*/
         
         this.d3_edges.exit().remove();
             

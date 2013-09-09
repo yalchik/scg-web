@@ -257,14 +257,14 @@ SCg.ModelEdge = function(options) {
     if (options.target)
         this.setTarget(options.target);
 
-    this.source_pos = new SCg.Vector3(0, 0, 0); // the begin position of egde in world coordinates
-    this.target_pos = new SCg.Vector3(0, 0, 0); // the end position of edge in world coordinates
+    this.source_pos = null; // the begin position of egde in world coordinates
+    this.target_pos = null; // the end position of edge in world coordinates
     this.points = [];
     this.source_dot = 0.5;
     this.target_dot = 0.5;
 
-    this.requestUpdate();
-    this.update();
+    //this.requestUpdate();
+    //this.update();
 };
 
 SCg.ModelEdge.prototype = Object.create( SCg.ModelObject.prototype );
@@ -296,6 +296,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
     this.source = scg_obj;
     this.source.edges.push(this);
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -304,6 +305,7 @@ SCg.ModelEdge.prototype.setSource = function(scg_obj) {
 SCg.ModelEdge.prototype.setSourceDot = function(dot) {
     this.source_dot = dot;
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -321,6 +323,7 @@ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
     this.target = scg_obj;
     this.target.edges.push(this);
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 /**
@@ -329,18 +332,37 @@ SCg.ModelEdge.prototype.setTarget = function(scg_obj) {
 SCg.ModelEdge.prototype.setTargetDot = function(dot) {
     this.target_dot = dot;
     this.need_observer_sync = true;
+    this.need_update = true;
 };
 
 SCg.ModelEdge.prototype.update = function() {
     SCg.ModelObject.prototype.update.call(this);
 
+    if (!this.source_pos)
+        this.source_pos = this.source.position.clone();
+    if (!this.target_pos)
+        this.target_pos = this.target.position.clone();
+
     // calculate begin and end positions
     if (this.points.length > 0) {
-        this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
-        this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+        
+        if (this.source instanceof SCg.ModelEdge) {
+            this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
+            this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+        } else {
+            this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
+            this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
+        }
+        
     } else {
-        this.source_pos = this.source.getConnectionPos(this.target.position, this.source_dot);
-        this.target_pos = this.target.getConnectionPos(this.source.position, this.target_dot);
+        
+        if (this.source instanceof SCg.ModelEdge) {
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+            this.target_pos = this.target.getConnectionPos(this.source_pos, this.target_dot);
+        } else {
+            this.target_pos = this.target.getConnectionPos(this.source_pos, this.target_dot);
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+        }
     }
 
     this.position.copyFrom(this.target_pos).add(this.source_pos).multiplyScalar(0.5);
