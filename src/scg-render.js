@@ -54,7 +54,9 @@ SCg.Render.prototype = {
         this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
         this.d3_nodes = this.d3_container.append('svg:g').selectAll('g');
         this.d3_dragline = this.d3_container.append('svg:g');
-
+        this.d3_line_points = this.d3_container.append('svg:g');
+        
+        this.line_point_idx = -1;
     },
     
     // -------------- Definitions --------------------
@@ -89,6 +91,14 @@ SCg.Render.prototype = {
 
                 p.append('svg:path')
                     .attr('d', 'M-5,-5L5,5M-5,5L5,-5');
+                    
+        // line point control
+        p = defs.append('svg:g')
+                .attr('id', 'linePoint')
+                p.append('svg:circle')
+                    .attr('cx', 0)
+                    .attr('cy', 0)
+                    .attr('r', 10)
     },
     
     // -------------- draw -----------------------
@@ -156,9 +166,6 @@ SCg.Render.prototype = {
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
             });
-            /*.each(function(d) {
-                SCgAlphabet.updateEdge(d, d3.select(this));
-            });*/
         
         this.d3_edges.exit().remove();
             
@@ -267,7 +274,43 @@ SCg.Render.prototype = {
         // update drag line
         this.d3_drag_line.attr('d', d_str);
     },
+    
+    updateLinePoints: function() {
+        var self = this;
+        
+        line_points = this.d3_line_points.selectAll('use');
+        points = line_points.data(this.scene.line_points, function(d) { return d.idx; })
+        points.exit().remove();
+        
+        if (this.scene.line_points.length == 0)
+            this.line_points_idx = -1;
+        
+        points.enter().append('svg:use')
+            .classed('SCgLinePoint', true)
+            .attr('xlink:href', '#linePoint')
+            .attr('transform', function(d) {
+                return 'translate(' + d.pos.x + ',' + d.pos.y + ')';
+            })
+            .on('mouseover', function(d) {
+                d3.select(this).classed('SCgLinePointHighlighted', true);
+            })
+            .on('mouseout', function(d) {
+                d3.select(this).classed('SCgLinePointHighlighted', false);
+            })
+            .on('mousedown', function(d) {
+                self.line_point_idx = d.idx;
+            });
+            /*.on('mouseup', function(d) {
+                self.scene.pointed_object = null;
+            });*/
             
+        line_points.each(function(d) {
+            d3.select(this).attr('transform', function(d) {
+                return 'translate(' + d.pos.x + ',' + d.pos.y + ')';
+            });
+        });
+    },
+    
     // -------------- Objects --------------------
     appendRenderNode: function(render_node) {
         render_node.d3_group = this.d3_container.append("svg:g");
@@ -279,17 +322,30 @@ SCg.Render.prototype = {
 
     // --------------- Events --------------------
     onMouseDown: function(window, render) {
-        var point = d3.mouse(window);
+        var point = d3.mouse(window);       
         render.scene.onMouseDown(point[0], point[1]);         
     },
     
     onMouseUp: function(window, render) {
         var point = d3.mouse(window);
+        
+         if (this.line_point_idx >= 0) {
+             this.line_point_idx = -1;
+             d3.event.stopPropagation();
+             return;
+         }
+        
         render.scene.onMouseUp(point[0], point[1]);
     },
     
     onMouseMove: function(window, render) {
         var point = d3.mouse(window);
+        
+        if (this.line_point_idx >= 0) {
+            this.scene.setLinePointPos(this.line_point_idx, {x: point[0], y: point[1]});
+            d3.event.stopPropagation();
+        }
+        
         render.scene.onMouseMove(point[0], point[1]);
     },
     

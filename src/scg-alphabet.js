@@ -238,11 +238,11 @@ var SCgAlphabet = {
             
             // remove old
             d3_group.selectAll('path').remove();
-                        
+            
+            d3_group.append('svg:path').classed('SCgEdgeSelectBounds', true).attr('d', position_path);
+            
             // if it accessory, then append main line
             if (edge.sc_type & sc_type_arc_access) {
-                
-                
                 
                 var main_style = 'SCgEdgeAccessPerm';
                 if (edge.sc_type & sc_type_arc_temp) {

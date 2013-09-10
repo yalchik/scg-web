@@ -42,6 +42,8 @@ SCg.Scene = function(options) {
     
     // drag line points
     this.drag_line_points = [];
+    // points of selected line object
+    this.line_points = [];
     
     // mouse position
     this.mouse_pos = new SCg.Vector3(0, 0, 0);
@@ -267,7 +269,7 @@ SCg.Scene.prototype = {
         this.selected_objects.push(obj);
         obj._setSelected(true);
         
-        this._fireSelectionChanged();
+        this.selectionChanged();
     },
     
     /**
@@ -285,7 +287,7 @@ SCg.Scene.prototype = {
         this.selected_objects.splice(idx, 1);
         obj._setSelected(false);
         
-        this._fireSelectionChanged();
+        this.selectionChanged();
     },
     
     /**
@@ -301,7 +303,26 @@ SCg.Scene.prototype = {
         
         this.selected_objects.splice(0, this.selected_objects.length);
         
-        if (need_event) this._fireSelectionChanged();
+        if (need_event) this.selectionChanged();
+    },
+    
+    selectionChanged: function() {
+        this._fireSelectionChanged();
+        
+        this.line_points.splice(0, this.line_points.length);
+        // if selected any of line objects, then create controls to control it
+        if (this.selected_objects.length == 1) {
+            var obj = this.selected_objects[0];
+            
+            if (obj instanceof SCg.ModelEdge) { /* @todo add contour and bus */
+                for (idx in obj.points) {
+                    this.line_points.push({pos: obj.points[idx], idx: idx});
+                }
+            }
+        }
+        
+        this.render.updateLinePoints();
+        this.updateObjectsVisual();
     },
     
     // -------- input processing -----------
@@ -490,6 +511,36 @@ SCg.Scene.prototype = {
             this.edge_data.source = this.edge_data.target = null;
         }
         this.render.updateDragLine();
+    },
+    
+    /**
+     * Update selected line point position
+     */
+    setLinePointPos: function(idx, pos) {
+        if (this.selected_objects.length != 1) {
+            SCg.error('Invalid state. Trying to update line point position, when there are no selected objects');
+            return;
+        }
+        
+        var edge = this.selected_objects[0];
+        if (!(edge instanceof SCg.ModelEdge)) {
+            SCg.error("Selected object isn't an edge");
+            return;
+        }
+        
+        if (edge.points.length <= idx) {
+            SCg.error('Invalid index of line point');
+            return;
+        }
+        edge.points[idx].x = pos.x;
+        edge.points[idx].y = pos.y;
+        
+        edge.requestUpdate();
+        edge.need_update = true;
+        edge.need_observer_sync = true;
+    
+        this.updateObjectsVisual();
+        this.render.updateLinePoints();
     },
         
     // ------------- events -------------
