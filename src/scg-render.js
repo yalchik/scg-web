@@ -10,7 +10,7 @@ SCg.Render.prototype = {
         this.containerId = params.containerId;
         this.d3_drawer = d3.select('#' + this.containerId).append("svg:svg").attr("pointer-events", "all").attr("width", '100%').attr("height", '100%');
         
-        d3.select('#' + this.containerId).attr('style', 'display: block');
+        d3.select('#' + this.containerId);//.attr('style', 'display: block');
         
         var self = this;
         this.d3_container = this.d3_drawer.append('svg:g')

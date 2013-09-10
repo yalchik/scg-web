@@ -336,12 +336,13 @@ SCg.ModelEdge.prototype.setTargetDot = function(dot) {
 };
 
 SCg.ModelEdge.prototype.update = function() {
-    SCg.ModelObject.prototype.update.call(this);
-
+    
     if (!this.source_pos)
         this.source_pos = this.source.position.clone();
     if (!this.target_pos)
         this.target_pos = this.target.position.clone();
+        
+    SCg.ModelObject.prototype.update.call(this);
 
     // calculate begin and end positions
     if (this.points.length > 0) {
@@ -384,6 +385,8 @@ SCg.ModelEdge.prototype.setPoints = function(points) {
 };
 
 SCg.ModelEdge.prototype.getConnectionPos = function(from, dotPos) {
+    
+    if (this.need_update)   this.update();
     
     // first of all we need to determine sector an it relative position
     var sector = Math.floor(dotPos);
