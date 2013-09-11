@@ -15,6 +15,7 @@ var SCgEditMode = {
 var SCgModalMode = {
     SCgModalNone: 0,
     SCgModalIdtf: 1,
+    SCgModalType: 2,
 };
 
 var KeyCode = {
@@ -113,7 +114,7 @@ SCg.Scene.prototype = {
         function remove_from_list(obj, list) {
             var idx = list.indexOf(obj);
             if (idx < 0) {
-                SCg.error("Can't find object for remove");
+                SCgDebug.error("Can't find object for remove");
                 return;
             }
             
@@ -518,18 +519,18 @@ SCg.Scene.prototype = {
      */
     setLinePointPos: function(idx, pos) {
         if (this.selected_objects.length != 1) {
-            SCg.error('Invalid state. Trying to update line point position, when there are no selected objects');
+            SCgDebug.error('Invalid state. Trying to update line point position, when there are no selected objects');
             return;
         }
         
         var edge = this.selected_objects[0];
         if (!(edge instanceof SCg.ModelEdge)) {
-            SCg.error("Selected object isn't an edge");
+            SCgDebug.error("Selected object isn't an edge");
             return;
         }
         
         if (edge.points.length <= idx) {
-            SCg.error('Invalid index of line point');
+            SCgDebug.error('Invalid index of line point');
             return;
         }
         edge.points[idx].x = pos.x;

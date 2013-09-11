@@ -21,6 +21,7 @@ SCg.Editor.prototype = {
         
         this.containerId = params.containerId;
         this.initUI();
+        
     },
     
     /**
@@ -33,71 +34,31 @@ SCg.Editor.prototype = {
         $(container).prepend('<div id="tools-' + this.containerId + '"></div>');
         var tools_container = '#tools-' + this.containerId;
         $(tools_container).load('static/sc_web/html/scg-tools-panel.html', function() {
-            
-            var cont = $(container);
-            
-            cont.find('#scg-tool-select').button('toggle');
-            
-            // handle clicks on mode change
-            cont.find('#scg-tool-select').click(function() {
-                self.scene.setEditMode(SCgEditMode.SCgModeSelect);
-            });
-            cont.find('#scg-tool-edge').click(function() {
-                self.scene.setEditMode(SCgEditMode.SCgModeEdge);
-            });
-            cont.find('#scg-tool-bus').click(function() {
-                self.scene.setEditMode(SCgEditMode.SCgModeBus);
-            });
-            cont.find('#scg-tool-contour').click(function() {
-                self.scene.setEditMode(SCgEditMode.SCgModeContour);
-            });
-            cont.find('#scg-tool-change-idtf').click(function() {
-                self.scene.setModal(SCgModalMode.SCgModalIdtf);
-                $(this).popover({container: container});
-                $(this).popover('show');
-                
-                var tool = $(this);
-                
-                function stop_modal() {
-                    self.scene.setModal(SCgModalMode.SCgModalNone);
-                    tool.popover('destroy');
-                    self.scene.updateObjectsVisual();
-                }
-                
-                
-                var input = $(container + ' #scg-change-idtf-input');
-                // setup initial value
-                input.focus().val(self.scene.selected_objects[0].text);
-                input.keypress(function (e) {
-                    if (e.keyCode == KeyCode.Enter || e.keyCode == KeyCode.Escape) {
-                        
-                        if (e.keyCode == KeyCode.Enter)   self.scene.selected_objects[0].setText(input.val());
-                        stop_modal();
-                        e.preventDefault();
-                    } 
-                    
+             $.ajax({
+                    url: "static/sc_web/html/scg-types-panel-nodes.html", 
+                    dataType: 'html',
+                    success: function(response) {
+                           self.node_types_panel_content = response;
+                    },
+                    error: function() {
+                        SCgDebug.error("Error to get nodes type change panel");
+                    },
+                    complete: function() {
+                        $.ajax({
+                                url: "static/sc_web/html/scg-types-panel-edges.html", 
+                                dataType: 'html',
+                                success: function(response) {
+                                       self.edge_types_panel_content = response;
+                                },
+                                error: function() {
+                                        SCgDebug.error("Error to get edges type change panel");
+                                },
+                                complete: function() {
+                                    self.bindToolEvents();
+                                }
+                            });
+                    }
                 });
-                
-                // process controls
-                $(container + ' #scg-change-idtf-apply').click(function() {
-                    self.scene.selected_objects[0].setText(input.val());
-                    stop_modal();
-                });
-                $(container + ' #scg-change-idtf-cancel').click(function() {
-                    stop_modal();
-                });
-                
-            });
-            
-            cont.find('#scg-tool-delete').click(function() {
-                self.scene.deleteObjects(self.scene.selected_objects.slice(0, self.scene.selected_objects.length));
-                self.scene.clearSelection();
-            });
-            
-            // initial update
-            self.onModalChanged();
-            self.onSelectionChanged();
-            
         });
         
         var self = this;
@@ -110,6 +71,112 @@ SCg.Editor.prototype = {
     },
     
     /**
+     * Bind events to panel tools
+     */
+    bindToolEvents: function() {
+        
+        var self = this;
+        var container = '#' + this.containerId;
+        var cont = $(container);
+            
+        cont.find('#scg-tool-select').button('toggle');
+        
+        // handle clicks on mode change
+        cont.find('#scg-tool-select').click(function() {
+            self.scene.setEditMode(SCgEditMode.SCgModeSelect);
+        });
+        cont.find('#scg-tool-edge').click(function() {
+            self.scene.setEditMode(SCgEditMode.SCgModeEdge);
+        });
+        cont.find('#scg-tool-bus').click(function() {
+            self.scene.setEditMode(SCgEditMode.SCgModeBus);
+        });
+        cont.find('#scg-tool-contour').click(function() {
+            self.scene.setEditMode(SCgEditMode.SCgModeContour);
+        });
+        cont.find('#scg-tool-change-idtf').click(function() {
+            self.scene.setModal(SCgModalMode.SCgModalIdtf);
+            $(this).popover({container: container});
+            $(this).popover('show');
+            
+            var tool = $(this);
+            
+            function stop_modal() {
+                self.scene.setModal(SCgModalMode.SCgModalNone);
+                tool.popover('destroy');
+                self.scene.updateObjectsVisual();
+            }
+            
+            
+            var input = $(container + ' #scg-change-idtf-input');
+            // setup initial value
+            input.focus().val(self.scene.selected_objects[0].text);
+            input.keypress(function (e) {
+                if (e.keyCode == KeyCode.Enter || e.keyCode == KeyCode.Escape) {
+                    
+                    if (e.keyCode == KeyCode.Enter)   self.scene.selected_objects[0].setText(input.val());
+                    stop_modal();
+                    e.preventDefault();
+                } 
+                
+            });
+            
+            // process controls
+            $(container + ' #scg-change-idtf-apply').click(function() {
+                self.scene.selected_objects[0].setText(input.val());
+                stop_modal();
+            });
+            $(container + ' #scg-change-idtf-cancel').click(function() {
+                stop_modal();
+            });
+            
+        });
+        
+        cont.find('#scg-tool-change-type').click(function() {
+            self.scene.setModal(SCgModalMode.SCgModalType);
+            
+            if (self.scene.selected_objects.length != 1) {
+                SCgDebug.error('Something wrong with type selection');
+                return;
+            }
+            
+            var tool = $(this);
+            
+            function stop_modal() {
+                self.scene.setModal(SCgModalMode.SCgModalNone);
+                tool.popover('destroy');
+                self.scene.updateObjectsVisual();
+            }
+            
+            var obj = self.scene.selected_objects[0];
+            
+            el = $(this);
+            el.popover({
+                    content: (obj instanceof SCg.ModelEdge) ? self.edge_types_panel_content : self.node_types_panel_content,
+                    container: container,
+                    title: 'Change type',
+                    html: true,
+                    delay: {show: 500, hide: 100}
+                  }).popover('show');
+                  
+            $(container + ' #scg-type-close').click(function() {
+                stop_modal();
+            });
+
+
+        });
+        
+        cont.find('#scg-tool-delete').click(function() {
+            self.scene.deleteObjects(self.scene.selected_objects.slice(0, self.scene.selected_objects.length));
+            self.scene.clearSelection();
+        });
+        
+        // initial update
+        self.onModalChanged();
+        self.onSelectionChanged();
+    },
+    
+    /**
      * Function that process selection changes in scene
      * It updated UI to current selection
      */
@@ -117,8 +184,10 @@ SCg.Editor.prototype = {
         
         if (this.scene.selected_objects.length == 1) {
             this._enableTool('#scg-tool-change-idtf');
+            this._enableTool('#scg-tool-change-type');
         } else {
             this._disableTool('#scg-tool-change-idtf');
+            this._disableTool('#scg-tool-change-type');
         }
         
         if (this.scene.selected_objects.length > 0) {
@@ -144,8 +213,9 @@ SCg.Editor.prototype = {
         update_tool('#scg-tool-edge');
         update_tool('#scg-tool-bus');
         update_tool('#scg-tool-contour');
-
+        
         update_tool('#scg-tool-change-idtf');
+        update_tool('#scg-tool-change-type');
         update_tool('#scg-tool-delete');
         update_tool('#scg-tool-zoomin');
         update_tool('#scg-tool-zoomout');
@@ -1611,6 +1681,7 @@ var SCgEditMode = {
 var SCgModalMode = {
     SCgModalNone: 0,
     SCgModalIdtf: 1,
+    SCgModalType: 2,
 };
 
 var KeyCode = {
@@ -1709,7 +1780,7 @@ SCg.Scene.prototype = {
         function remove_from_list(obj, list) {
             var idx = list.indexOf(obj);
             if (idx < 0) {
-                SCg.error("Can't find object for remove");
+                SCgDebug.error("Can't find object for remove");
                 return;
             }
             
@@ -2114,18 +2185,18 @@ SCg.Scene.prototype = {
      */
     setLinePointPos: function(idx, pos) {
         if (this.selected_objects.length != 1) {
-            SCg.error('Invalid state. Trying to update line point position, when there are no selected objects');
+            SCgDebug.error('Invalid state. Trying to update line point position, when there are no selected objects');
             return;
         }
         
         var edge = this.selected_objects[0];
         if (!(edge instanceof SCg.ModelEdge)) {
-            SCg.error("Selected object isn't an edge");
+            SCgDebug.error("Selected object isn't an edge");
             return;
         }
         
         if (edge.points.length <= idx) {
-            SCg.error('Invalid index of line point');
+            SCgDebug.error('Invalid index of line point');
             return;
         }
         edge.points[idx].x = pos.x;
@@ -2353,168 +2424,5 @@ SCg.LayoutManager.prototype.doLayout = function() {
 SCg.LayoutManager.prototype.onTickUpdate = function() { 
     this.scene.updateObjectsVisual();
 };
-
-
-/* --- scg-component.js --- */
-SCgComponent = {
-    type: 0,
-    outputLang: 'hypermedia_format_scg_json',
-    formats: [],
-    factory: function(config) {
-        return new scgViewerWindow(config);
-    }
-};
-
-/**
- * scgViewerWindow
- * @param config
- * @constructor
- */
-var scgViewerWindow = function(config){
-    this._initWindow(config);
-};
-
-scgViewerWindow.prototype = {
-
-    /**
-     * scgViewer Window init
-     * @param config
-     * @private
-     */
-    _initWindow : function(config){
-
-        /**
-         * Container for render graph
-         * @type {String}
-         */
-        this.domContainer = config.container;
-
-        this.editor = new SCg.Editor();
-        this.editor.init({containerId: config.container});
-    },
-
-    /**
-     * Set new data in viewer
-     * @param {Object} data
-     */
-    receiveData : function(data){
-        
-        this._buildGraph(data);
-    },
-
-    /**
-     * Build scGraph from JSON
-     * @param {Object} data
-     * @return {scGraph}
-     * @private
-     */
-    _buildGraph : function(data){
-        
-        var elements = {};
-        var edges = new Array();
-        for (var i = 0; i < data.length; i++) {
-            var el = data[i];
-            
-            if (elements.hasOwnProperty(el.id))
-                continue;
-                
-            if (this.editor.scene.objects.hasOwnProperty(el.id)) {
-                elements[el.id] = this.editor.scene.objects[el.id];
-                continue;
-            }
-            
-            if (el.el_type & sc_type_node || el.el_type & sc_type_link) {
-                var model_node = this.editor.scene.createNode(el.el_type, new SCg.Vector3(10 * Math.random(), 10 * Math.random(), 0), '');
-                model_node.setScAddr(el.id);
-                
-                elements[el.id] = model_node;
-            } else if (el.el_type & sc_type_arc_mask) {
-                edges.push(el);
-            }
-        }
-        
-        // create edges
-        var founded = true;
-        while (edges.length > 0 && founded) {
-            founded = false;
-            for (idx in edges) {
-                var obj = edges[idx];
-                var beginId = obj.begin;
-                var endId = obj.end;
-                // try to get begin and end object for arc
-                if (elements.hasOwnProperty(beginId) && elements.hasOwnProperty(endId)) {
-                    var beginNode = elements[beginId];
-                    var endNode = elements[endId];
-                    
-                    founded = true;
-                    edges.splice(idx, 1);
-                    
-                    var model_edge = this.editor.scene.createEdge(beginNode, endNode, obj.el_type);
-                    model_edge.setScAddr(obj.id);
-                    
-                    elements[obj.id] = model_edge;
-                } 
-            }
-        }
-        
-        if (edges.length > 0)
-            alert("error");
-        
-        this.editor.render.update();
-        this.editor.scene.layout();
-    },
-
-    /**
-     * Destroy window
-     * @return {Boolean}
-     */
-    destroy : function(){
-        delete this.editor;
-        return true;
-    },
-
-
-    /**
-     * Emit translate identifiers
-     */
-    translateIdentifiers    : function(language){
-        
-        var self = this;
-        
-        SCWeb.core.Translation.translate(this.editor.scene.getScAddrs(), language, function(namesMap) {
-            for (addr in namesMap) {
-                var obj = self.editor.scene.getObjectByScAddr(addr);
-                if (obj) {
-                    obj.text = namesMap[addr];
-                }
-            }
-            
-            self.editor.render.updateTexts();
-        });
-
-    },
-
-    /**
-     * Get current language in viewer
-     * @return String
-     */
-    getIdentifiersLanguage  : function(){
-        return this._currentLanguage;
-    },
-
-    _getObjectsForTranslate : function(){      
-        return [];
-    },
-
-    _translateObjects       : function(namesMap){
-
-    }
-
-};
-
-
-SCWeb.core.ComponentManager.appendComponentInitialize(function() {
-    SCWeb.core.ComponentManager.registerComponent(SCgComponent);
-});
 
 
