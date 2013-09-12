@@ -203,9 +203,9 @@ SCg.Editor.prototype = {
                 stop_modal();
             });
 
-            $(container + ' .popover .btn').click(function(e) {
+            $(container + ' .popover .btn').click(function() {
                 var obj = self.scene.selected_objects[0];
-                obj.setScType(self.typesMap[e.target.id]);
+                obj.setScType(self.typesMap[$(this).attr('id')]);
                 self.scene.updateObjectsVisual();
                 stop_modal();
             });
