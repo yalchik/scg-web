@@ -151,6 +151,7 @@ SCg.Render.prototype = {
         // add edges that haven't visual
         this.d3_edges.enter().append('svg:g')
             .classed('SCgStateNormal', true)
+            .classed('SCgEdge', true)
             .attr('pointer-events', 'visibleStroke')
             .on('mouseover', function(d) {
                 d3.select(this).classed('SCgStateHighlighted', true);
@@ -187,11 +188,15 @@ SCg.Render.prototype = {
             
             d.need_observer_sync = false;
             
-            d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
-                    .classed('SCgStateSelected', function(d) {
-                        return d.is_selected;
-                    }).select('text')
-                    .text(function(d) { return d.text; });;
+            var g = d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
+                            .classed('SCgStateSelected', function(d) {
+                                return d.is_selected;
+                            })
+            g.select('use').attr('xlink:href', function(d) {
+                return '#' + SCgAlphabet.getDefId(d.sc_type); 
+            });
+            
+            g.select('text').text(function(d) { return d.text; });;
         });
         
         this.d3_edges.each(function(d) {

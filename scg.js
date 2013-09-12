@@ -12,6 +12,45 @@ SCg.Editor.prototype = {
 
     init: function(params)
     {
+        this.typesMap = {
+            'scg-type-node': sc_type_node,
+            'scg-type-node-const': sc_type_node | sc_type_const,
+            'scg-type-node-const-group': sc_type_node | sc_type_const | sc_type_node_class,
+            'scg-type-node-const-abstract': sc_type_node | sc_type_const | sc_type_node_abstract,
+            'scg-type-node-const-material': sc_type_node | sc_type_const | sc_type_node_material,
+            'scg-type-node-const-norole': sc_type_node | sc_type_const | sc_type_node_norole,
+            'scg-type-node-const-role': sc_type_node | sc_type_const | sc_type_node_role,
+            'scg-type-node-const-struct': sc_type_node | sc_type_const | sc_type_node_struct,
+            'scg-type-node-const-tuple': sc_type_node | sc_type_const | sc_type_node_tuple,
+            'scg-type-node-var': sc_type_node | sc_type_var,
+            'scg-type-node-var-group': sc_type_node | sc_type_var | sc_type_node_class,
+            'scg-type-node-var-abstract': sc_type_node | sc_type_var | sc_type_node_abstract,
+            'scg-type-node-var-material': sc_type_node | sc_type_var | sc_type_node_material,
+            'scg-type-node-var-norole': sc_type_node | sc_type_var | sc_type_node_norole,
+            'scg-type-node-var-role': sc_type_node | sc_type_var | sc_type_node_role,
+            'scg-type-node-var-struct': sc_type_node | sc_type_var | sc_type_node_struct,
+            'scg-type-node-var-tuple': sc_type_node | sc_type_var | sc_type_node_tuple,
+            'scg-type-edge-common': sc_type_edge_common,
+            'scg-type-arc-common': sc_type_arc_common,
+            'scg-type-arc-common-access': sc_type_arc_access,
+            'scg-type-edge-const': sc_type_edge_common | sc_type_const,
+            'scg-type-arc-const': sc_type_arc_common | sc_type_const,
+            'scg-type-arc-const-perm-pos-access': sc_type_arc_access | sc_type_const | sc_type_arc_pos | sc_type_arc_perm,
+            'scg-type-arc-const-perm-neg-access': sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_perm,
+            'scg-type-arc-const-perm-fuz-access': sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_perm,
+            'scg-type-arc-const-temp-pos-access': sc_type_arc_access | sc_type_const | sc_type_arc_pos | sc_type_arc_temp,
+            'scg-type-arc-const-temp-neg-access': sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_temp,
+            'scg-type-arc-const-temp-fuz-access': sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_temp,
+            'scg-type-edge-var': sc_type_edge_common | sc_type_var,
+            'scg-type-arc-var': sc_type_arc_common | sc_type_var,
+            'scg-type-arc-var-perm-pos-access': sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_perm,
+            'scg-type-arc-var-perm-neg-access': sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_perm,
+            'scg-type-arc-var-perm-fuz-access': sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_perm,
+            'scg-type-arc-var-temp-pos-access': sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_temp,
+            'scg-type-arc-var-temp-neg-access': sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_temp,
+            'scg-type-arc-var-temp-fuz-access': sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_temp
+        };
+        
         this.render = new SCg.Render();
         this.scene = new SCg.Scene( {render: this.render } );
         this.scene.init();
@@ -159,11 +198,18 @@ SCg.Editor.prototype = {
                     delay: {show: 500, hide: 100}
                   }).popover('show');
                   
+            cont.find('.popover-title').append('<button id="scg-type-close" type="button" class="close">&times;</button>');
+                  
             $(container + ' #scg-type-close').click(function() {
                 stop_modal();
             });
 
-
+            $(container + ' .popover .btn').click(function(e) {
+                var obj = self.scene.selected_objects[0];
+                obj.setScType(self.typesMap[e.target.id]);
+                self.scene.updateObjectsVisual();
+                stop_modal();
+            });
         });
         
         cont.find('#scg-tool-delete').click(function() {
@@ -532,6 +578,15 @@ SCg.ModelObject.prototype.setScale = function(scale) {
  */
 SCg.ModelObject.prototype.setText = function(text) {
     this.text = text;
+    this.need_observer_sync = true;
+};
+
+/**
+ * Setup new type of object
+ * @param {Integer} type New type value
+ */
+SCg.ModelObject.prototype.setScType = function(type) {
+    this.sc_type = type;
     this.need_observer_sync = true;
 };
 
@@ -1436,6 +1491,7 @@ SCg.Render.prototype = {
         // add edges that haven't visual
         this.d3_edges.enter().append('svg:g')
             .classed('SCgStateNormal', true)
+            .classed('SCgEdge', true)
             .attr('pointer-events', 'visibleStroke')
             .on('mouseover', function(d) {
                 d3.select(this).classed('SCgStateHighlighted', true);
@@ -1472,11 +1528,15 @@ SCg.Render.prototype = {
             
             d.need_observer_sync = false;
             
-            d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
-                    .classed('SCgStateSelected', function(d) {
-                        return d.is_selected;
-                    }).select('text')
-                    .text(function(d) { return d.text; });;
+            var g = d3.select(this).attr("transform", 'translate(' + d.position.x + ', ' + d.position.y + ')')
+                            .classed('SCgStateSelected', function(d) {
+                                return d.is_selected;
+                            })
+            g.select('use').attr('xlink:href', function(d) {
+                return '#' + SCgAlphabet.getDefId(d.sc_type); 
+            });
+            
+            g.select('text').text(function(d) { return d.text; });;
         });
         
         this.d3_edges.each(function(d) {

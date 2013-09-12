@@ -109,6 +109,15 @@ SCg.ModelObject.prototype.setText = function(text) {
 };
 
 /**
+ * Setup new type of object
+ * @param {Integer} type New type value
+ */
+SCg.ModelObject.prototype.setScType = function(type) {
+    this.sc_type = type;
+    this.need_observer_sync = true;
+};
+
+/**
  * Notify all connected edges to sync
  */
 SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
