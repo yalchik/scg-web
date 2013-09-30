@@ -1,9 +1,7 @@
 SCgComponent = {
-    type: 0,
-    outputLang: 'hypermedia_format_scg_json',
-    formats: [],
-    factory: function(config) {
-        return new scgViewerWindow(config);
+    formats: ['hypermedia_format_scg_json'],
+    factory: function(sandbox) {
+        return new scgViewerWindow(snadbox.container);
     }
 };
 
@@ -12,8 +10,8 @@ SCgComponent = {
  * @param config
  * @constructor
  */
-var scgViewerWindow = function(config){
-    this._initWindow(config);
+var scgViewerWindow = function(container){
+    this._initWindow(container);
 };
 
 scgViewerWindow.prototype = {
@@ -23,7 +21,7 @@ scgViewerWindow.prototype = {
      * @param config
      * @private
      */
-    _initWindow : function(config){
+    _initWindow : function(container){
 
         /**
          * Container for render graph
@@ -148,13 +146,11 @@ scgViewerWindow.prototype = {
         return [];
     },
 
-    _translateObjects       : function(namesMap){
+    _translateObjects: function(namesMap){
 
     }
 
 };
 
 
-SCWeb.core.ComponentManager.appendComponentInitialize(function() {
-    SCWeb.core.ComponentManager.registerComponent(SCgComponent);
-});
+SCWeb.core.ComponentManager.appendComponentInitialize(SCgComponent);
