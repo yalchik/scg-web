@@ -71,9 +71,9 @@ SCg.Editor.prototype = {
         var container = '#' + this.containerId;
         $(container).prepend('<div id="tools-' + this.containerId + '"></div>');
         var tools_container = '#tools-' + this.containerId;
-        $(tools_container).load('static/sc_web/html/scg-tools-panel.html', function() {
+        $(tools_container).load('static/components/html/scg-tools-panel.html', function() {
              $.ajax({
-                    url: "static/sc_web/html/scg-types-panel-nodes.html", 
+                    url: "static/components/html/scg-types-panel-nodes.html", 
                     dataType: 'html',
                     success: function(response) {
                            self.node_types_panel_content = response;
@@ -83,7 +83,7 @@ SCg.Editor.prototype = {
                     },
                     complete: function() {
                         $.ajax({
-                                url: "static/sc_web/html/scg-types-panel-edges.html", 
+                                url: "static/components/html/scg-types-panel-edges.html", 
                                 dataType: 'html',
                                 success: function(response) {
                                        self.edge_types_panel_content = response;

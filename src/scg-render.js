@@ -193,9 +193,14 @@ SCg.Render.prototype = {
                             .classed('SCgStateSelected', function(d) {
                                 return d.is_selected;
                             })
-            g.select('use').attr('xlink:href', function(d) {
-                return '#' + SCgAlphabet.getDefId(d.sc_type); 
-            });
+                            
+            g.select('use')
+				.attr('xlink:href', function(d) {
+					return '#' + SCgAlphabet.getDefId(d.sc_type); 
+				})
+				.attr("sc_addr", function(d) {
+					return d.sc_addr;
+				});
             
             g.selectAll('text').text(function(d) { return d.text; });;
         });
