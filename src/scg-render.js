@@ -98,12 +98,21 @@ SCg.Render.prototype = {
                 p.append('svg:circle')
                     .attr('cx', 0)
                     .attr('cy', 0)
-                    .attr('r', 10)
+                    .attr('r', 10);
+
+        p = defs.append('svg:g')
+            .attr('id', 'contourAcceptPoint')
+            p.append('svg:circle')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', 10)
+            p.append('svg:path')
+                .attr('d', 'M-5,-5 L0,5 5,-5');
     },
     
     // -------------- draw -----------------------
     update: function() {
-    
+
         var self = this;
         
         // update nodes visual
@@ -169,19 +178,43 @@ SCg.Render.prototype = {
             });
         
         this.d3_edges.exit().remove();
-            
+
         // update contours visual
         this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
-        
-        g = this.d3_contours.enter().append('svg:path')
-                                    .attr('d', d3.svg.line().interpolate('cardinal-closed'))
-                                    .attr('class', 'SCgContour');
+
+        g = this.d3_contours.enter().append('svg:polygon')
+            .attr('class', 'SCgContour')
+            .attr('points', function(d) {
+                var verteciesString = "";
+                for (var i = 0; i < d.verticies.length; i++) {
+                    var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                    verteciesString = verteciesString.concat(vertex);
+                }
+                return verteciesString;
+            })
+            .on('mouseover', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', true);
+                self.scene.onMouseOverObject(d);
+            })
+            .on('mouseout', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', false);
+                self.scene.onMouseOutObject(d);
+            })
+            .on('mousedown', function(d) {
+                self.scene.onMouseDownObject(d);
+            })
+            .on('mouseup', function(d) {
+                self.scene.onMouseUpObject(d);
+            });
+
         this.d3_contours.exit().remove();
         
         this.updateObjects();
     },
 
     updateObjects: function() {
+        var self = this;
+
         this.d3_nodes.each(function (d) {
             
             if (!d.need_observer_sync) return; // do nothing
@@ -212,18 +245,36 @@ SCg.Render.prototype = {
                 return d.is_selected;
             });
         });
-                
+
         this.d3_contours.each(function(d) {
             d3.select(this).attr('d', function(d) { 
-                
+
                 if (!d.need_observer_sync) return; // do nothing
-                
+
                 if (d.need_update)
                     d.update();
-                return self.d3_contour_line(d.verticies) + 'Z'; 
+
+                var d3_contour = d3.select(this);
+
+                d3_contour.classed('SCgStateSelected', function(d) {
+                    return d.is_selected;
+                });
+
+                d3_contour.attr('points', function(d) {
+                    var verteciesString = "";
+                    for (var i = 0; i < d.verticies.length; i++) {
+                        var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                        verteciesString = verteciesString.concat(vertex);
+                    }
+                    return verteciesString;
+                });
+
+                d.need_update = false;
+                d.need_observer_sync = false;
+
+                return self.d3_contour_line(d.verticies) + 'Z';
             });
         });
-
     },
     
     updateTexts: function() {
@@ -244,8 +295,22 @@ SCg.Render.prototype = {
         }        
         
         points.enter().append('svg:use')
-            .classed('SCgDragLinePoint', true)
-            .attr('xlink:href', '#dragPoint')
+            .attr('class', function(d) {
+                if  (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    return 'SCgContourAcceptPoint';
+                }
+                else {
+                    return 'SCgDragLinePoint';
+                }
+            })
+            .attr('xlink:href', function(d) {
+                if  (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    return '#contourAcceptPoint';
+                }
+                else {
+                    return '#dragPoint';
+                }
+            })
             .attr('transform', function(d) {
                 return 'translate(' + d.x + ',' + d.y + ')';
             })
@@ -256,8 +321,13 @@ SCg.Render.prototype = {
                 d3.select(this).classed('SCgDragLinePointHighlighted', false);
             })
             .on('mousedown', function(d) {
-                self.scene.revertDragPoint(d.idx);
-                d3.event.stopPropagation();
+                if (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    self.scene.createCurrentContour();
+                }
+                else {
+                    self.scene.revertDragPoint(d.idx);
+                    d3.event.stopPropagation();
+                }
             });
             
         this.d3_drag_line.classed('hidden', false);
@@ -327,7 +397,7 @@ SCg.Render.prototype = {
 
     // --------------- Events --------------------
     onMouseDown: function(window, render) {
-        var point = d3.mouse(window);       
+        var point = d3.mouse(window);
         render.scene.onMouseDown(point[0], point[1]);         
     },
     
