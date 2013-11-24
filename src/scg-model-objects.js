@@ -586,3 +586,17 @@ SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
         }
     }
 };
+
+SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
+    var points = SCg.Algorithms.polyclip(this.verticies, from, this.position);
+    var nearestIntersectionPoint = new SCg.Vector3(points[0].x, points[0].y, 0);
+    for (var i = 1; i < points.length; i++) {
+        var nextPoint = new SCg.Vector3(points[i].x, points[i].y, 0);
+        var currentLength = from.clone().sub(nearestIntersectionPoint).length();
+        var newLength = from.clone().sub(nextPoint).length();
+        if (currentLength > newLength) {
+            nearestIntersectionPoint = nextPoint;
+        }
+    }
+    return nearestIntersectionPoint;
+};
