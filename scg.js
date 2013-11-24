@@ -1075,15 +1075,40 @@ SCg.ModelContour = function(options) {
 
     this.childs = [];
     this.verticies = options.verticies ? options.verticies : [];
-    this.controlPoint = null;
+    this.sc_type = options.sc_type ? options.sc_type : sc_type_contour;
+    this.previousPoint = null;
+
+    var cx = 0;
+    var cy = 0;
+    for (var i = 0; i < this.verticies.length; i++) {
+        cx += this.verticies[i].x;
+        cy += this.verticies[i].y;
+    }
+
+    cx /= this.verticies.length;
+    cy /= this.verticies.length;
+    this.setPosition(new SCg.Vector3(cx, cy, 0));
+    this.previousPoint = this.position;
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
 
+SCg.ModelContour.prototype.setNewPoint = function(pos) {
+
+    this.newPoint = pos;
+    this.need_observer_sync = true;
+
+    this.requestUpdate();
+    this.notifyEdgesUpdate();
+};
+
 SCg.ModelContour.prototype.update = function() {
-    if (this.controlPoint) {
-        var dx = this.position.x - this.controlPoint.x;
-        var dy = this.position.y - this.controlPoint.y;
+    if (this.previousPoint) {
+        //var dx = this.position.x - this.previousPoint.x;
+        //var dy = this.position.y - this.previousPoint.y;
+        var dx = this.newPoint.x - this.previousPoint.x;
+        var dy = this.newPoint.y - this.previousPoint.y;
+
 
         for (var i = 0; i < this.childs.length; i++) {
             var childNewPositionX = this.childs[i].position.x + dx;
@@ -1097,7 +1122,13 @@ SCg.ModelContour.prototype.update = function() {
             this.verticies[i].y += dy;
         }
 
-        this.controlPoint = this.position;
+        var contourNewPositionX = this.position.x + dx;
+        var contourNewPositionY = this.position.y + dy;
+        var contourNewPositionVector = new SCg.Vector3(contourNewPositionX, contourNewPositionY, 0)
+        this.setPosition(contourNewPositionVector);
+
+        //this.previousPoint = this.position;
+        this.previousPoint = this.newPoint;
     }
 
 };
@@ -1136,13 +1167,6 @@ SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
             this.addChild(nodes[i]);
         }
     }
-};
-
-SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
-//    var points = SCg.Algorithms.polyclip(this.verticies, from, this.position);
-//
-//    return points[points.length - 1];
-    return SCg.ModelObject.prototype.getConnectionPos.call(this, from, dotPos);
 };
 
 
@@ -2258,8 +2282,12 @@ SCg.Scene.prototype = {
         this.mouse_pos.x = x;
         this.mouse_pos.y = y;
         
-        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object && (this.focused_object.sc_type & sc_type_node)) {
-            this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object) {
+            if (this.focused_object.sc_type & sc_type_node) {
+                this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+            } else if (this.focused_object.sc_type & sc_type_contour) {
+                this.focused_object.setNewPoint(new SCg.Vector3(x, y, 0));
+            }
             this.updateObjectsVisual();
         }
 
@@ -2325,7 +2353,7 @@ SCg.Scene.prototype = {
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             this.focused_object = obj;
             if (obj instanceof SCg.ModelContour) {
-                obj.controlPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
+                obj.previousPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
             }
         }
 

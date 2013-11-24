@@ -336,8 +336,12 @@ SCg.Scene.prototype = {
         this.mouse_pos.x = x;
         this.mouse_pos.y = y;
         
-        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object && (this.focused_object.sc_type & sc_type_node)) {
-            this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object) {
+            if (this.focused_object.sc_type & sc_type_node) {
+                this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+            } else if (this.focused_object.sc_type & sc_type_contour) {
+                this.focused_object.setNewPoint(new SCg.Vector3(x, y, 0));
+            }
             this.updateObjectsVisual();
         }
 
@@ -403,7 +407,7 @@ SCg.Scene.prototype = {
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             this.focused_object = obj;
             if (obj instanceof SCg.ModelContour) {
-                obj.controlPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
+                obj.previousPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
             }
         }
 
