@@ -507,6 +507,7 @@ SCg.ModelContour = function(options) {
     cy /= this.verticies.length;
     this.setPosition(new SCg.Vector3(cx, cy, 0));
     this.previousPoint = this.position;
+    this.newPoint = this.position;
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
