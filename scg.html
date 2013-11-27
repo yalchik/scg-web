@@ -140,39 +140,10 @@
 					editor.scene.appendEdge(model_edge);
 					edges.push(model_edge);
 				}
-
-                var contours = [];
-                /*
-                var model_contour = new SCg.ModelContour({
-                    verticies: [
-                        new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0),
-                        new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0),
-                        new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0),
-                        new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0),
-                        new SCg.Vector3(900 * Math.random(), 600 * Math.random(), 0)
-                    ]
-                });
-
-                model_contour.addNodesWhichAreInContourPolygon(nodes);
-                editor.scene.appendContour(model_contour);
-                contours.push(model_contour);
-                */
-
-                var model_contour = new SCg.ModelContour({
-                    verticies: [
-                        new SCg.Vector3(300, 300, 0),
-                        new SCg.Vector3(700, 300, 0),
-                        new SCg.Vector3(700, 100, 0),
-                        new SCg.Vector3(300, 100, 0)
-                    ]
-                });
-
-                model_contour.addNodesWhichAreInContourPolygon(nodes);
-                editor.scene.appendContour(model_contour);
-                contours.push(model_contour);
-
+				
+				
 				editor.render.update();
-				//editor.scene.layout();
+				editor.scene.layout();
 			});
 		</script>
 		

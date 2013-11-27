@@ -1,19 +1,19 @@
 SCgComponent = {
-    type: 0,
-    outputLang: 'hypermedia_format_scg_json',
-    formats: [],
-    factory: function(config) {
-        return new scgViewerWindow(config);
+	ext_lang: 'scg_code',
+    formats: ['hypermedia_format_scg_json'],
+    factory: function(sandbox) {
+        return new scgViewerWindow(sandbox);
     }
 };
+
 
 /**
  * scgViewerWindow
  * @param config
  * @constructor
  */
-var scgViewerWindow = function(config){
-    this._initWindow(config);
+var scgViewerWindow = function(sandbox){
+    this._initWindow(sandbox);
 };
 
 scgViewerWindow.prototype = {
@@ -23,16 +23,22 @@ scgViewerWindow.prototype = {
      * @param config
      * @private
      */
-    _initWindow : function(config){
+    _initWindow : function(sandbox){
 
         /**
          * Container for render graph
          * @type {String}
          */
-        this.domContainer = config.container;
+        this.domContainer = sandbox.container;
+        this.sandbox = sandbox;
 
         this.editor = new SCg.Editor();
-        this.editor.init({containerId: config.container});
+        this.editor.init({containerId: sandbox.container});
+        
+        // delegate event handlers
+        this.sandbox.eventDataAppend = $.proxy(this.receiveData, this);
+        this.sandbox.eventGetObjectsToTranslate = $.proxy(this.getObjectsToTranslate, this);
+        this.sandbox.eventApplyTranslation = $.proxy(this.applyTranslation, this);
     },
 
     /**
@@ -115,46 +121,22 @@ scgViewerWindow.prototype = {
         return true;
     },
 
+    getObjectsToTranslate : function(){      
+        return this.editor.scene.getScAddrs();
+    },
 
-    /**
-     * Emit translate identifiers
-     */
-    translateIdentifiers    : function(language){
-        
-        var self = this;
-        
-        SCWeb.core.Translation.translate(this.editor.scene.getScAddrs(), language, function(namesMap) {
-            for (addr in namesMap) {
-                var obj = self.editor.scene.getObjectByScAddr(addr);
-                if (obj) {
-                    obj.text = namesMap[addr];
-                }
-            }
+    applyTranslation: function(namesMap){
+		for (addr in namesMap) {
+			var obj = this.editor.scene.getObjectByScAddr(addr);
+			if (obj) {
+				obj.text = namesMap[addr];
+			}
+		}
             
-            self.editor.render.updateTexts();
-        });
-
-    },
-
-    /**
-     * Get current language in viewer
-     * @return String
-     */
-    getIdentifiersLanguage  : function(){
-        return this._currentLanguage;
-    },
-
-    _getObjectsForTranslate : function(){      
-        return [];
-    },
-
-    _translateObjects       : function(namesMap){
-
+        this.editor.render.updateTexts();
     }
 
 };
 
 
-SCWeb.core.ComponentManager.appendComponentInitialize(function() {
-    SCWeb.core.ComponentManager.registerComponent(SCgComponent);
-});
+SCWeb.core.ComponentManager.appendComponentInitialize(SCgComponent);

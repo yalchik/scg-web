@@ -214,6 +214,8 @@ SCg.ModelObject.prototype.setScAddr = function(addr) {
     //! @todo update state
     if (this.sc_addr)
         this.scene.objects[this.sc_addr] = this;
+        
+    this.need_observer_sync = true;
 }
 
 // -------------- node ---------

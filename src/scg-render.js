@@ -146,6 +146,7 @@ SCg.Render.prototype = {
             .attr('xlink:href', function(d) {
                 return '#' + SCgAlphabet.getDefId(d.sc_type); 
             })
+
         g.append('svg:text')
             .attr('class', 'SCgText')
             .attr('x', function(d) { return d.scale.x / 1.3; })
@@ -225,11 +226,16 @@ SCg.Render.prototype = {
                             .classed('SCgStateSelected', function(d) {
                                 return d.is_selected;
                             })
-            g.select('use').attr('xlink:href', function(d) {
-                return '#' + SCgAlphabet.getDefId(d.sc_type); 
-            });
+                            
+            g.select('use')
+				.attr('xlink:href', function(d) {
+					return '#' + SCgAlphabet.getDefId(d.sc_type); 
+				})
+				.attr("sc_addr", function(d) {
+					return d.sc_addr;
+				});
             
-            g.select('text').text(function(d) { return d.text; });;
+            g.selectAll('text').text(function(d) { return d.text; });;
         });
         
         this.d3_edges.each(function(d) {
