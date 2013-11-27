@@ -556,13 +556,9 @@ SCg.Algorithms.polyclip = function(pin, segStart, segEnd) {
     for (var ci = 0; ci < n; ci++) {
         var p = pin[ci];
         if (inside(p, plane)) {
-            if (inside(s, plane)) {
-                pout.push(p);
-            }
-            else {
+            if (!inside(s, plane)) {
                 var t = clip(s, p, plane);
                 pout.push(t);
-                pout.push(p);
             }
         }
         else {
@@ -1089,6 +1085,7 @@ SCg.ModelContour = function(options) {
     cy /= this.verticies.length;
     this.setPosition(new SCg.Vector3(cx, cy, 0));
     this.previousPoint = this.position;
+    this.newPoint = this.position;
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
@@ -1171,6 +1168,8 @@ SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
 
 SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
     var points = SCg.Algorithms.polyclip(this.verticies, from, this.position);
+    console.log(points);
+    console.log(this.verticies);
     var nearestIntersectionPoint = new SCg.Vector3(points[0].x, points[0].y, 0);
     for (var i = 1; i < points.length; i++) {
         var nextPoint = new SCg.Vector3(points[i].x, points[i].y, 0);
@@ -2088,7 +2087,6 @@ SCg.Scene.prototype = {
         } else if (obj instanceof SCg.ModelContour) {
             this.deleteObjects(obj.childs);
             remove_from_list(obj, this.contours);
-            this.render.update();
         }
         
         if (obj.sc_addr)
@@ -2140,7 +2138,6 @@ SCg.Scene.prototype = {
      * @param {Array} objects Array of sc.g-objects to delete
      */
     deleteObjects: function(objects) {
-        
         function collect_objects(container, root) {
             if (container.indexOf(root) >= 0)
                 return;
@@ -2155,11 +2152,11 @@ SCg.Scene.prototype = {
         var objs = [];
         
         // collect objects for deletion
-        for (idx in objects)
+        for (var idx in objects)
             collect_objects(objs, objects[idx]);
-        
+
         // delete objects
-        for (idx in objs) {
+        for (var idx in objs) {
             this.removeObject(objs[idx]);
             objs[idx].destroy();
         }

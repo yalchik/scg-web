@@ -255,13 +255,9 @@ SCg.Algorithms.polyclip = function(pin, segStart, segEnd) {
     for (var ci = 0; ci < n; ci++) {
         var p = pin[ci];
         if (inside(p, plane)) {
-            if (inside(s, plane)) {
-                pout.push(p);
-            }
-            else {
+            if (!inside(s, plane)) {
                 var t = clip(s, p, plane);
                 pout.push(t);
-                pout.push(p);
             }
         }
         else {
