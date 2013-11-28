@@ -15,7 +15,7 @@ var SCgEditMode = {
 var SCgModalMode = {
     SCgModalNone: 0,
     SCgModalIdtf: 1,
-    SCgModalType: 2,
+    SCgModalType: 2
 };
 
 var KeyCode = {
@@ -125,7 +125,8 @@ SCg.Scene.prototype = {
             remove_from_list(obj, this.nodes);
         } else if (obj instanceof SCg.ModelEdge) {
             remove_from_list(obj, this.edges);
-        } else if (obj instanceof SCg.ModeContour) {
+        } else if (obj instanceof SCg.ModelContour) {
+            this.deleteObjects(obj.childs);
             remove_from_list(obj, this.contours);
         }
         
@@ -178,7 +179,6 @@ SCg.Scene.prototype = {
      * @param {Array} objects Array of sc.g-objects to delete
      */
     deleteObjects: function(objects) {
-        
         function collect_objects(container, root) {
             if (container.indexOf(root) >= 0)
                 return;
@@ -193,11 +193,11 @@ SCg.Scene.prototype = {
         var objs = [];
         
         // collect objects for deletion
-        for (idx in objects)
+        for (var idx in objects)
             collect_objects(objs, objects[idx]);
-        
+
         // delete objects
-        for (idx in objs) {
+        for (var idx in objs) {
             this.removeObject(objs[idx]);
             objs[idx].destroy();
         }
@@ -295,7 +295,7 @@ SCg.Scene.prototype = {
      * Clear selection list
      */
     clearSelection: function() {
-        
+
         var need_event = this.selected_objects.length > 0;
         
         for (idx in this.selected_objects) {
@@ -334,23 +334,31 @@ SCg.Scene.prototype = {
         this.mouse_pos.x = x;
         this.mouse_pos.y = y;
         
-        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object && (this.focused_object.sc_type & sc_type_node)) {
-            this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+        if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object) {
+            if (this.focused_object.sc_type & sc_type_node) {
+                this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
+            } else if (this.focused_object.sc_type & sc_type_contour) {
+                this.focused_object.setNewPoint(new SCg.Vector3(x, y, 0));
+            }
             this.updateObjectsVisual();
         }
-        
-        if (this.edit_mode == SCgEditMode.SCgModeEdge) {
+
+        if (this.edit_mode == SCgEditMode.SCgModeEdge || this.edit_mode == SCgEditMode.SCgModeContour) {
             this.render.updateDragLine();
         }
     },
     
     onMouseDown: function(x, y) {
-        
+
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
-        
+
         // append new line point
-        if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeEdge && this.edge_data.source) {
-            this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
+        if (!this.pointed_object) {
+            var isModeEdge = this.edit_mode == SCgEditMode.SCgModeEdge;
+            var isModeContour = this.edit_mode == SCgEditMode.SCgModeContour;
+            if (isModeContour || (isModeEdge && this.edge_data.source)) {
+                this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
+            }
         }
     },
     
@@ -360,6 +368,8 @@ SCg.Scene.prototype = {
         
         if (!this.pointed_object)
             this.clearSelection();
+
+        this.focused_object = null;
     },
     
     onMouseDoubleClick: function(x, y) {
@@ -387,16 +397,20 @@ SCg.Scene.prototype = {
         
         this.pointed_object = null;
     },
-    
+
     onMouseDownObject: function(obj) {
         
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
-        
-        if (this.edit_mode == SCgEditMode.SCgModeSelect)
+
+        if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             this.focused_object = obj;
-            
+            if (obj instanceof SCg.ModelContour) {
+                obj.previousPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
+            }
+        }
+
         if (this.edit_mode == SCgEditMode.SCgModeEdge) {
-            
+
             // start new edge
             if (!this.edge_data.source) {
                 this.edge_data.source = obj;
@@ -405,36 +419,50 @@ SCg.Scene.prototype = {
                 // source and target must be not equal
                 if (this.edge_data.source != obj) {
                     var edge = this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
-                    
+
                     var mouse_pos = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
                     edge.setSourceDot(this.edge_data.source.calculateDotPos(mouse_pos));
                     edge.setTargetDot(obj.calculateDotPos(mouse_pos));
-                    
+
                     if (this.drag_line_points.length > 1) {
                         edge.setPoints(this.drag_line_points.slice(1));
                     }
                     this.edge_data.source = this.edge_data.target = null;
-                    
+
                     this.drag_line_points.splice(0, this.drag_line_points.length);
-                    
+
                     this.updateRender();
                     this.render.updateDragLine();
                 }
             }
         }
-            
+
     },
     
     onMouseUpObject: function(obj) {
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
+            // case we moved object from contour
+            if (obj.contour && !obj.contour.isNodeInPolygon(obj)) {
+                obj.contour.removeChild(obj);
+            }
+
+            // case we moved object into the contour
+            if (!obj.contour && obj instanceof SCg.ModelNode) {
+                for (var i = 0; i < this.contours.length; i++) {
+                    if (this.contours[i].isNodeInPolygon(obj)) {
+                        this.contours[i].addChild(obj);
+                    }
+                }
+            }
+
             if (obj == this.focused_object) {
                 this.clearSelection();
                 this.appendSelection(obj);
                 this.updateObjectsVisual();
             }
-        
+
             this.focused_object = null;
         }
     },
@@ -501,7 +529,7 @@ SCg.Scene.prototype = {
      * @param {Integer} idx Index of drag point to revert.
      */
     revertDragPoint: function(idx) {
-        if (this.edit_mode != SCgEditMode.SCgModeEdge) {
+        if (this.edit_mode != SCgEditMode.SCgModeEdge && this.edit_mode != SCgEditMode.SCgModeContour) {
             SCgDebug.error('Work with drag point in incorrect edit mode');
             return;
         }
@@ -542,6 +570,28 @@ SCg.Scene.prototype = {
     
         this.updateObjectsVisual();
         this.render.updateLinePoints();
+    },
+
+    createCurrentContour: function() {
+        if (this.drag_line_points.length < 3) {
+            SCgDebug.error('Set at least 3 points for contour');
+            return;
+        }
+
+        var polygon =  $.map(this.drag_line_points, function (vertex) {
+            return $.extend({}, vertex);
+        });
+
+        var contour = new SCg.ModelContour({
+            verticies: polygon
+        });
+
+        contour.addNodesWhichAreInContourPolygon(this.nodes);
+        this.appendContour(contour);
+        this.pointed_object = contour;
+        this.drag_line_points.splice(0, this.drag_line_points.length);
+        this.updateRender();
+        this.render.updateDragLine();
     },
         
     // ------------- events -------------
