@@ -215,7 +215,24 @@ SCg.Editor.prototype = {
             self.scene.deleteObjects(self.scene.selected_objects.slice(0, self.scene.selected_objects.length));
             self.scene.clearSelection();
         });
-        
+
+
+        //problem with opening the same doc twice
+        cont.find('#scg-tool-open').click(function(){
+            var document = $(this)[0].ownerDocument;
+            var open_dialog = document.getElementById("scg-tool-open-dialog");
+
+            open_dialog.onchange = function(){
+                return GwfFileLoader.load({
+                    file: open_dialog.files[0],
+                    render : self.render});
+
+            }
+            ScgObjectBuilder.scene = self.scene;
+            var result = open_dialog.click();
+        });
+
+
         // initial update
         self.onModalChanged();
         self.onSelectionChanged();
