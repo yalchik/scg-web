@@ -209,3 +209,62 @@ GwfObjectContour.prototype.buildObject = function (args) {
     contour.update();
     return contour;
 }
+
+
+var GwfObjectBus = function (args) {
+    GwfObject.call(this, args);
+    this.required_attrs = ["id", "parent", "b_x", "b_y", "e_x", "e_y", "owner", "idtf"];
+}
+
+GwfObjectBus.prototype = Object.create(GwfObject.prototype);
+
+GwfObjectBus.prototype.parseObject = function (args) {
+    var bus = args.gwf_object;
+    var reader = args.reader;
+
+    this.attributes = reader.fetchAttributes(bus, this.required_attrs);
+
+    if (this.attributes == false)
+        return false;
+
+    this.id = this.attributes['id'];
+
+    //bus points
+    this.parsePoints(args);
+
+    return this;
+}
+
+GwfObjectBus.prototype.buildObject = function (args) {
+    var scene = args.scene;
+    var builder = args.builder;
+
+
+
+    var bus = new SCg.ModelBus({});
+
+    bus.setSource(builder.getOrCreate(this.attributes["owner"]));
+    bus.setTargetDot(0);
+
+    var bus_points = this.attributes["points"];
+    var points = [];
+
+    for(var i = 0; i < bus_points.length; i++){
+        var bus_point = bus_points[i];
+        var point = new SCg.Vector2(parseFloat(bus_point.x) + 100, parseFloat(bus_point.y));
+        points.push(point);
+    }
+
+    points.push(new SCg.Vector2(parseFloat(this.attributes["e_x"]) + 100, parseFloat(this.attributes["e_y"])))
+
+    bus.setPoints(points);
+
+    args.scg_object = bus;
+    this.fixParent(args);
+
+    bus.update();
+    scene.appendBus(bus);
+
+    return bus;
+}
+

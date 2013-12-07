@@ -73,10 +73,13 @@ GwfObjectInfoReader = {
         var contours = this.parseGroupOfElements(static_sector, "contour", false);
         this.forEach(contours, this.parseContour);
 
-
         //nodes
         var nodes = this.parseGroupOfElements(static_sector, "node", false);
         this.forEach(nodes, this.parseNode);
+
+        //buses
+        var buses = this.parseGroupOfElements(static_sector, "bus", false);
+        this.forEach(buses, this.parseBus);
 
         //arcs
         var arcs = this.parseGroupOfElements(static_sector, "arc", false);
@@ -141,6 +144,14 @@ GwfObjectInfoReader = {
 
         this.objects_info[parsed_node.id] = parsed_node;
 
+    },
+
+    parseBus: function (bus){
+        var parsed_bus = new GwfObjectBus(null);
+
+        if (parsed_bus.parseObject({gwf_object: bus, reader: this}) == false)
+                    return false;
+        this.objects_info[parsed_bus.id] = parsed_bus;
     },
 
     fetchAttributes: function (tag_element, required_attrs) {
