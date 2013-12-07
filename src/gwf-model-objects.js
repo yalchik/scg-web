@@ -50,7 +50,7 @@ GwfObject.prototype.fixParent = function (args) {
 var GwfObjectNode = function (args) {
 
     GwfObject.call(this, args);
-    this.required_attrs = ["id", "type", "x", "y", "parent"];
+    this.required_attrs = ["id", "type", "x", "y", "parent", "idtf"];
 }
 
 GwfObjectNode.prototype = Object.create(GwfObject.prototype);
@@ -63,7 +63,7 @@ GwfObjectNode.prototype.parseObject = function (args) {
     this.attributes = reader.fetchAttributes(node, this.required_attrs);
 
     if (this.attributes == false)
-        return;
+        return false;
 
 
     //fix some attrs
@@ -72,6 +72,7 @@ GwfObjectNode.prototype.parseObject = function (args) {
     this.attributes["y"] = parseFloat(this.attributes["y"]);
 
     this.id = this.attributes["id"];
+    return this;
 }
 
 // have to specify scene,builder
@@ -94,7 +95,7 @@ GwfObjectNode.prototype.buildObject = function (args) {
 var GwfObjectPair = function (args) {
     GwfObject.call(this, args);
 
-    this.required_attrs = ["id", "type", "id_b", "id_e", "dotBBalance", "dotEBalance"];
+    this.required_attrs = ["id", "type", "id_b", "id_e", "dotBBalance", "dotEBalance", "idtf"];
 }
 
 GwfObjectPair.prototype = Object.create(GwfObject.prototype);
@@ -107,7 +108,7 @@ GwfObjectPair.prototype.parseObject = function (args) {
     this.attributes = reader.fetchAttributes(pair, this.required_attrs);
 
     if (this.attributes == false)
-        return;
+        return false;
 
     //fix some attrs
 
@@ -120,6 +121,8 @@ GwfObjectPair.prototype.parseObject = function (args) {
     // line points
 
     this.parsePoints(args);
+
+    return this;
 
 }
 GwfObjectPair.prototype.buildObject = function (args) {
@@ -165,12 +168,14 @@ GwfObjectContour.prototype.parseObject = function (args) {
     this.attributes = reader.fetchAttributes(contour, this.required_attrs);
 
     if (this.attributes == false)
-        return;
+        return false;
 
     this.id = this.attributes['id'];
 
     //contour points
     this.parsePoints(args);
+
+    return this;
 }
 
 GwfObjectContour.prototype.buildObject = function (args) {

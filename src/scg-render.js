@@ -53,6 +53,7 @@ SCg.Render.prototype = {
         this.d3_contours = this.d3_container.append('svg:g').selectAll('path');
         this.d3_edges = this.d3_container.append('svg:g').selectAll('path');
         this.d3_nodes = this.d3_container.append('svg:g').selectAll('g');
+        this.d3_buses = this.d3_container.append('svg:g').selectAll('path');
         this.d3_dragline = this.d3_container.append('svg:g');
         this.d3_line_points = this.d3_container.append('svg:g');
         
@@ -210,6 +211,28 @@ SCg.Render.prototype = {
 
         this.d3_contours.exit().remove();
         
+		// update buses visual
+        this.d3_buses = this.d3_buses.data(this.scene.buses, function(d) { return d.id; });
+		
+		this.d3_buses.enter().append('svg:g')
+            .classed('SCgStateNormal', true)
+            .classed('SCgBus', true)
+            .attr('pointer-events', 'visibleStroke')
+            .on('mouseover', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', true);
+                self.scene.onMouseOverObject(d);
+            })
+            .on('mouseout', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', false);
+                self.scene.onMouseOutObject(d);
+            })
+            .on('mousedown', function(d) {
+                self.scene.onMouseDownObject(d);
+            })
+            .on('mouseup', function(d) {
+                self.scene.onMouseUpObject(d);
+            });
+		
         this.updateObjects();
     },
 
@@ -251,8 +274,8 @@ SCg.Render.prototype = {
                 return d.is_selected;
             });
         });
-
         this.d3_contours.each(function(d) {
+		
             d3.select(this).attr('d', function(d) { 
 
                 if (!d.need_observer_sync) return; // do nothing
@@ -281,6 +304,20 @@ SCg.Render.prototype = {
                 return self.d3_contour_line(d.verticies) + 'Z';
             });
         });
+		
+		this.d3_buses.each(function(d) {
+            
+            if (!d.need_observer_sync) return; // do nothing
+            d.need_observer_sync = false;
+            
+            if (d.need_update)
+                d.update();
+            var d3_bus = d3.select(this);
+            SCgAlphabet.updateBus(d, d3_bus);
+            d3_bus.classed('SCgStateSelected', function(d) {
+                return d.is_selected;
+            });
+        });
     },
     
     updateTexts: function() {
@@ -291,10 +328,46 @@ SCg.Render.prototype = {
         var self = this;
         
         // remove old points
-        drag_line_points = this.d3_dragline.selectAll('use');
+        drag_line_points = this.d3_dragline.selectAll('use.SCgDragLinePoint');
         points = drag_line_points.data(this.scene.drag_line_points, function(d) { return d.idx; })
         points.exit().remove();
         
+		if (this.scene.edit_mode == SCgEditMode.SCgModeBus) {
+            this.d3_drag_line.classed('dragline', false);	
+            this.d3_drag_line.classed('draglineBus', true);	
+
+			var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
+			if (this.scene.bus_data.end != null) {
+				
+				var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
+				end_point.exit().remove();
+				end_point.enter().append('scg:use')
+				.classed('SCgBusEndPoint', true)
+				.attr('xlink:href', '#dragPoint')
+				.attr('transform', function(d) {
+					return 'translate(' + (d.x + 20) + ',' + d.y + ')';
+				})
+				.on('mouseover', function(d) {
+					d3.select(this).classed('SCgBusEndPointHighlighted', true);
+					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
+				})
+				.on('mouseout', function(d) {
+					d3.select(this).classed('SCgBusEndPointHighlighted', false);
+					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+				})
+				.on('mousedown', function(d) {
+					self.scene.finishBusCreation(d.idx);
+					d3.event.stopPropagation();
+				});
+			} 
+			else bus_points.remove();
+		}
+		else if (this.scene.edit_mode == SCgEditMode.SCgModeEdge) {
+		    this.d3_drag_line.classed('SCgBus', false)
+            this.d3_drag_line.classed('dragline', true);	
+            this.d3_drag_line.classed('draglineBus', false);		
+		}
+		
         if (this.scene.drag_line_points.length < 1) {
             this.d3_drag_line.classed('hidden', true);
             return;
@@ -335,9 +408,9 @@ SCg.Render.prototype = {
                     d3.event.stopPropagation();
                 }
             });
-            
-        this.d3_drag_line.classed('hidden', false);
-        
+			
+        this.d3_drag_line.classed('hidden', false);        
+		
         var d_str = '';
         // create path description
         for (idx in this.scene.drag_line_points) {
