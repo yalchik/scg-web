@@ -65,6 +65,7 @@ GwfObject.prototype.fixParent = function (args) {
     if (parent != "0") {
         var parent_object = args.builder.getOrCreate(parent);
         parent_object.addChild(args.scg_object);
+        args.scg_object.update();
         parent_object.update();
     }
 }
@@ -172,7 +173,8 @@ GwfObjectPair.prototype.buildObject = function (args) {
         points.push(point);
     }
     edge.setPoints(points);
-
+    source.update();
+    target.update();
     edge.update();
 
     return edge;
@@ -291,9 +293,9 @@ GwfObjectBus.prototype.buildObject = function (args) {
     args.scg_object = bus;
     this.fixParent(args);
 
-    bus.update();
-    scene.appendBus(bus);
 
+    scene.appendBus(bus);
+    bus.update();
     return bus;
 }
 
