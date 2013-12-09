@@ -201,7 +201,8 @@ SCg.Render.prototype = {
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
             });
-		
+		this.d3_buses.exit().remove();
+
         this.updateObjects();
     },
 
@@ -289,27 +290,29 @@ SCg.Render.prototype = {
 
 			var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
 			if (this.scene.bus_data.end != null) {
+				//if (bus_points.length < 2) d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
 				
-				var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
+                var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
 				end_point.exit().remove();
 				end_point.enter().append('scg:use')
-				.classed('SCgBusEndPoint', true)
-				.attr('xlink:href', '#dragPoint')
-				.attr('transform', function(d) {
-					return 'translate(' + (d.x + 20) + ',' + d.y + ')';
-				})
-				.on('mouseover', function(d) {
-					d3.select(this).classed('SCgBusEndPointHighlighted', true);
-					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
-				})
-				.on('mouseout', function(d) {
-					d3.select(this).classed('SCgBusEndPointHighlighted', false);
-					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
-				})
-				.on('mousedown', function(d) {
-					self.scene.finishBusCreation(d.idx);
-					d3.event.stopPropagation();
-				});
+    				.classed('SCgBusEndPoint', true)
+    				.attr('xlink:href', '#dragPoint')
+    				.attr('transform', function(d) {
+    					return 'translate(' + (d.x + 20) + ',' + d.y + ')';
+    				})
+    				.on('mouseover', function(d) {
+    					d3.select(this).classed('SCgBusEndPointHighlighted', true);
+    					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
+    				})
+    				.on('mouseout', function(d) {
+    					d3.select(this).classed('SCgBusEndPointHighlighted', false);
+    					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+    				})
+    				.on('mousedown', function(d) {
+    					self.scene.finishBusCreation(d.idx);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+    					d3.event.stopPropagation();
+    				});
 			} 
 			else bus_points.remove();
 		}
