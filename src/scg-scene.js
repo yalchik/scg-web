@@ -475,7 +475,7 @@ SCg.Scene.prototype = {
         }
         if (this.edit_mode == SCgEditMode.SCgModeBus) {
         
-            if (!this.bus_data.source && !obj.bus) {
+            if (!this.bus_data.source && !obj.bus && !(obj instanceof SCg.ModelBus)) {
                 this.bus_data.source = obj;
                 this.drag_line_points.push({x: this.mouse_pos.x, y: this.mouse_pos.y, idx: this.drag_line_points.length});
             }
