@@ -99,12 +99,21 @@ SCg.Render.prototype = {
                 p.append('svg:circle')
                     .attr('cx', 0)
                     .attr('cy', 0)
-                    .attr('r', 10)
+                    .attr('r', 10);
+
+        p = defs.append('svg:g')
+            .attr('id', 'contourAcceptPoint')
+            p.append('svg:circle')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', 10)
+            p.append('svg:path')
+                .attr('d', 'M-5,-5 L0,5 5,-5');
     },
     
     // -------------- draw -----------------------
     update: function() {
-    
+
         var self = this;
         
         // update nodes visual
@@ -171,19 +180,41 @@ SCg.Render.prototype = {
             });
         
         this.d3_edges.exit().remove();
-            
+
         // update contours visual
         this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
-        
-        g = this.d3_contours.enter().append('svg:path')
-                                    .attr('d', d3.svg.line().interpolate('cardinal-closed'))
-                                    .attr('class', 'SCgContour');
+
+        g = this.d3_contours.enter().append('svg:polygon')
+            .attr('class', 'SCgContour')
+            .attr('points', function(d) {
+                var verteciesString = "";
+                for (var i = 0; i < d.verticies.length; i++) {
+                    var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                    verteciesString = verteciesString.concat(vertex);
+                }
+                return verteciesString;
+            })
+            .on('mouseover', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', true);
+                self.scene.onMouseOverObject(d);
+            })
+            .on('mouseout', function(d) {
+                d3.select(this).classed('SCgStateHighlighted', false);
+                self.scene.onMouseOutObject(d);
+            })
+            .on('mousedown', function(d) {
+                self.scene.onMouseDownObject(d);
+            })
+            .on('mouseup', function(d) {
+                self.scene.onMouseUpObject(d);
+            });
+
         this.d3_contours.exit().remove();
         
-		// update buses visual
+        // update buses visual
         this.d3_buses = this.d3_buses.data(this.scene.buses, function(d) { return d.id; });
-		
-		this.d3_buses.enter().append('svg:g')
+
+        this.d3_buses.enter().append('svg:g')
             .classed('SCgStateNormal', true)
             .classed('SCgBus', true)
             .attr('pointer-events', 'visibleStroke')
@@ -201,13 +232,14 @@ SCg.Render.prototype = {
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
             });
-		this.d3_buses.exit().remove();
+        this.d3_buses.exit().remove();
 
         this.updateObjects();
     },
 
     updateObjects: function() {
-		
+
+        var self = this
         this.d3_nodes.each(function (d) {
             
             if (!d.need_observer_sync) return; // do nothing
@@ -220,12 +252,12 @@ SCg.Render.prototype = {
                             })
                             
             g.select('use')
-				.attr('xlink:href', function(d) {
-					return '#' + SCgAlphabet.getDefId(d.sc_type); 
-				})
-				.attr("sc_addr", function(d) {
-					return d.sc_addr;
-				});
+                .attr('xlink:href', function(d) {
+                    return '#' + SCgAlphabet.getDefId(d.sc_type); 
+                })
+                .attr("sc_addr", function(d) {
+                    return d.sc_addr;
+                });
             
             g.selectAll('text').text(function(d) { return d.text; });;
         });
@@ -243,20 +275,42 @@ SCg.Render.prototype = {
                 return d.is_selected;
             });
         });
-          
+
         this.d3_contours.each(function(d) {
-		
+        
             d3.select(this).attr('d', function(d) { 
-                
+
                 if (!d.need_observer_sync) return; // do nothing
-                
+
                 if (d.need_update)
                     d.update();
+
                // return self.d3_contour_line(d.verticies) + 'Z'; 
+
+
+                var d3_contour = d3.select(this);
+
+                d3_contour.classed('SCgStateSelected', function(d) {
+                    return d.is_selected;
+                });
+
+                d3_contour.attr('points', function(d) {
+                    var verteciesString = "";
+                    for (var i = 0; i < d.verticies.length; i++) {
+                        var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                        verteciesString = verteciesString.concat(vertex);
+                    }
+                    return verteciesString;
+                });
+
+                d.need_update = false;
+                d.need_observer_sync = false;
+
+                return self.d3_contour_line(d.verticies) + 'Z';
             });
         });
-		
-		this.d3_buses.each(function(d) {
+
+        this.d3_buses.each(function(d) {
             
             if (!d.need_observer_sync) return; // do nothing
             d.need_observer_sync = false;
@@ -266,10 +320,9 @@ SCg.Render.prototype = {
             var d3_bus = d3.select(this);
             SCgAlphabet.updateBus(d, d3_bus);
             d3_bus.classed('SCgStateSelected', function(d) {
-                return d.is_selected;
+                return d.is_selected;       
             });
         });
-
     },
     
     updateTexts: function() {
@@ -284,52 +337,66 @@ SCg.Render.prototype = {
         points = drag_line_points.data(this.scene.drag_line_points, function(d) { return d.idx; })
         points.exit().remove();
         
-		if (this.scene.edit_mode == SCgEditMode.SCgModeBus) {
-            this.d3_drag_line.classed('dragline', false);	
-            this.d3_drag_line.classed('draglineBus', true);	
+        if (this.scene.edit_mode == SCgEditMode.SCgModeBus) {
+            this.d3_drag_line.classed('dragline', false);   
+            this.d3_drag_line.classed('draglineBus', true); 
 
-			var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
-			if (this.scene.bus_data.end != null) {
-				//if (bus_points.length < 2) d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
-				
+            var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
+            if (this.scene.bus_data.end != null) {
+                //if (bus_points.length < 2) d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+                
                 var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
-				end_point.exit().remove();
-				end_point.enter().append('scg:use')
-    				.classed('SCgBusEndPoint', true)
-    				.attr('xlink:href', '#dragPoint')
-    				.attr('transform', function(d) {
-    					return 'translate(' + (d.x + 20) + ',' + d.y + ')';
-    				})
-    				.on('mouseover', function(d) {
-    					d3.select(this).classed('SCgBusEndPointHighlighted', true);
-    					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
-    				})
-    				.on('mouseout', function(d) {
-    					d3.select(this).classed('SCgBusEndPointHighlighted', false);
-    					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
-    				})
-    				.on('mousedown', function(d) {
-    					self.scene.finishBusCreation(d.idx);
+                end_point.exit().remove();
+                end_point.enter().append('scg:use')
+                    .classed('SCgBusEndPoint', true)
+                    .attr('xlink:href', '#dragPoint')
+                    .attr('transform', function(d) {
+                        return 'translate(' + (d.x + 20) + ',' + d.y + ')';
+                    })
+                    .on('mouseover', function(d) {
+                        d3.select(this).classed('SCgBusEndPointHighlighted', true);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
+                    })
+                    .on('mouseout', function(d) {
+                        d3.select(this).classed('SCgBusEndPointHighlighted', false);
                         d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
-    					d3.event.stopPropagation();
-    				});
-			} 
-			else bus_points.remove();
-		}
-		else if (this.scene.edit_mode == SCgEditMode.SCgModeEdge) {
-		    this.d3_drag_line.classed('SCgBus', false)
-            this.d3_drag_line.classed('dragline', true);	
-            this.d3_drag_line.classed('draglineBus', false);		
-		}
-		
+                    })
+                    .on('mousedown', function(d) {
+                        self.scene.finishBusCreation(d.idx);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+                        d3.event.stopPropagation();
+                    });
+            } 
+            else bus_points.remove();
+        }
+        else if (this.scene.edit_mode == SCgEditMode.SCgModeEdge) {
+            this.d3_drag_line.classed('SCgBus', false)
+            this.d3_drag_line.classed('dragline', true);    
+            this.d3_drag_line.classed('draglineBus', false);        
+        }
+        
         if (this.scene.drag_line_points.length < 1) {
             this.d3_drag_line.classed('hidden', true);
             return;
         }        
         
         points.enter().append('svg:use')
-            .classed('SCgDragLinePoint', true)
-            .attr('xlink:href', '#dragPoint')
+            .attr('class', function(d) {
+                if  (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    return 'SCgContourAcceptPoint';
+                }
+                else {
+                    return 'SCgDragLinePoint';
+                }
+            })
+            .attr('xlink:href', function(d) {
+                if  (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    return '#contourAcceptPoint';
+                }
+                else {
+                    return '#dragPoint';
+                }
+            })
             .attr('transform', function(d) {
                 return 'translate(' + d.x + ',' + d.y + ')';
             })
@@ -340,12 +407,17 @@ SCg.Render.prototype = {
                 d3.select(this).classed('SCgDragLinePointHighlighted', false);
             })
             .on('mousedown', function(d) {
-                self.scene.revertDragPoint(d.idx);
-                d3.event.stopPropagation();
+                if (d.idx == 0 && self.scene.edit_mode == SCgEditMode.SCgModeContour) {
+                    self.scene.createCurrentContour();
+                }
+                else {
+                    self.scene.revertDragPoint(d.idx);
+                    d3.event.stopPropagation();
+                }
             });
-			
+            
         this.d3_drag_line.classed('hidden', false);        
-		
+        
         var d_str = '';
         // create path description
         for (idx in this.scene.drag_line_points) {
@@ -411,7 +483,7 @@ SCg.Render.prototype = {
 
     // --------------- Events --------------------
     onMouseDown: function(window, render) {
-        var point = d3.mouse(window);       
+        var point = d3.mouse(window);
         render.scene.onMouseDown(point[0], point[1]);         
     },
     

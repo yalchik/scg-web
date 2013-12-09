@@ -376,12 +376,12 @@ SCg.ModelEdge.prototype.update = function() {
         this.source_pos = this.source.position.clone();
     if (!this.target_pos)
         this.target_pos = this.target.position.clone();
-        
+
     SCg.ModelObject.prototype.update.call(this);
 
     // calculate begin and end positions
     if (this.points.length > 0) {
-        
+
         if (this.source instanceof SCg.ModelEdge) {
             this.source_pos = this.source.getConnectionPos(new SCg.Vector3(this.points[0].x, this.points[0].y, 0), this.source_dot);
             this.target_pos = this.target.getConnectionPos(new SCg.Vector3(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y, 0), this.target_dot);
@@ -391,7 +391,7 @@ SCg.ModelEdge.prototype.update = function() {
         }
         
     } else {
-        
+
         if (this.source instanceof SCg.ModelEdge) {
             this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
             this.target_pos = this.target.getConnectionPos(this.source_pos, this.target_dot);
@@ -518,41 +518,64 @@ SCg.ModelContour = function(options) {
     SCg.ModelObject.call(this, options);
 
     this.childs = [];
-    this.verticies = [];
+    this.verticies = options.verticies ? options.verticies : [];
+    this.sc_type = options.sc_type ? options.sc_type : sc_type_contour;
+    this.previousPoint = null;
+
+    var cx = 0;
+    var cy = 0;
+    for (var i = 0; i < this.verticies.length; i++) {
+        cx += this.verticies[i].x;
+        cy += this.verticies[i].y;
+    }
+
+    cx /= this.verticies.length;
+    cy /= this.verticies.length;
+    this.setPosition(new SCg.Vector3(cx, cy, 0));
+    this.previousPoint = this.position;
+    this.newPoint = this.position;
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
 
-SCg.ModelContour.prototype.update = function() {
+SCg.ModelContour.prototype.setNewPoint = function(pos) {
 
-    // http://jsfiddle.net/NNwFa/44/
-    
-    var verts = [];
-    var cx = 0;
-    var cy = 0;
-    for (var i = 0; i < this.childs.length; i++) {
-        var pos = this.childs[i].position;
-        verts.push([pos.x , pos.y]);
-        
-        cx += pos.x;
-        cy += pos.y;
+    this.newPoint = pos;
+    this.need_observer_sync = true;
+
+    this.requestUpdate();
+    this.notifyEdgesUpdate();
+};
+
+SCg.ModelContour.prototype.update = function() {
+    if (this.previousPoint) {
+        //var dx = this.position.x - this.previousPoint.x;
+        //var dy = this.position.y - this.previousPoint.y;
+        var dx = this.newPoint.x - this.previousPoint.x;
+        var dy = this.newPoint.y - this.previousPoint.y;
+
+
+        for (var i = 0; i < this.childs.length; i++) {
+            var childNewPositionX = this.childs[i].position.x + dx;
+            var childNewPositionY = this.childs[i].position.y + dy;
+            var childNewPositionVector = new SCg.Vector3(childNewPositionX, childNewPositionY, 0)
+            this.childs[i].setPosition(childNewPositionVector);
+        }
+
+        for (var i = 0; i < this.verticies.length; i++) {
+            this.verticies[i].x += dx;
+            this.verticies[i].y += dy;
+        }
+
+        var contourNewPositionX = this.position.x + dx;
+        var contourNewPositionY = this.position.y + dy;
+        var contourNewPositionVector = new SCg.Vector3(contourNewPositionX, contourNewPositionY, 0)
+        this.setPosition(contourNewPositionVector);
+
+        //this.previousPoint = this.position;
+        this.previousPoint = this.newPoint;
     }
-    
-    cx /= float(this.childs.length);
-    cy /= float(this.childs.length);
-    
-    var cV = new SCg.Vector2(cx, cy);
-    var pV = new SCg.Vector2(0, 0);
-    
-    for (var i = 0; i < this.verts.length; i++) {
-        var pos = this.verts[i];
-        
-        
-        cx += pos.x;
-        cy += pos.y;
-    }
-    
-    this.verticies = d3.geom.hull(verts);
+
 };
 
 /**
@@ -561,16 +584,51 @@ SCg.ModelContour.prototype.update = function() {
  */
 SCg.ModelContour.prototype.addChild = function(child) {
     this.childs.push(child);
+    child.contour = this;
 };
 
 /**
  * Remove child from contour
  * @param {SCg.ModelObject} child Child object for remove
  */
- SCg.ModelContour.prototype.removeChild = function(child) {
-    this.childs.remove(child);
- };
- 
+
+SCg.ModelContour.prototype.removeChild = function(child) {
+    var idx = this.childs.indexOf(child);
+    this.childs.splice(idx, 1);
+    child.contour = null;
+};
+
+SCg.ModelContour.prototype.isNodeInPolygon = function (node) {
+    return SCg.Algorithms.isPointInPolygon(node.position, this.verticies);
+};
+
+/**
+ * Convenient function for testing, which does mass checking nodes is in the contour
+ * and adds them to childs of the contour
+ * @param nodes array of {SCg.ModelNode}
+ */
+SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
+    for (var i = 0; i < nodes.length; i++) {
+        if (!nodes[i].contour && this.isNodeInPolygon(nodes[i])) {
+            this.addChild(nodes[i]);
+        }
+    }
+};
+
+SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
+    var points = SCg.Algorithms.polyclip(this.verticies, from, this.position);
+    var nearestIntersectionPoint = new SCg.Vector3(points[0].x, points[0].y, 0);
+    for (var i = 1; i < points.length; i++) {
+        var nextPoint = new SCg.Vector3(points[i].x, points[i].y, 0);
+        var currentLength = from.clone().sub(nearestIntersectionPoint).length();
+        var newLength = from.clone().sub(nextPoint).length();
+        if (currentLength > newLength) {
+            nearestIntersectionPoint = nextPoint;
+        }
+    }
+    return nearestIntersectionPoint;
+};
+
 SCg.ModelBus = function(options) {
     
     SCg.ModelObject.call(this, options);
@@ -586,6 +644,7 @@ SCg.ModelBus = function(options) {
     this.source_dot = 0.5;
     this.target_dot = 0.5;
 
+    this.previousPoint = null;
     //this.requestUpdate();
     //this.update();
 };
@@ -667,17 +726,25 @@ SCg.ModelBus.prototype.getConnectionPos = SCg.ModelEdge.prototype.getConnectionP
 
 SCg.ModelBus.prototype.calculateDotPos = SCg.ModelEdge.prototype.calculateDotPos;
 
-SCg.ModelBus.prototype.changePosition = function(delta) {
+SCg.ModelBus.prototype.changePosition = function(mouse_pos) {
 
-    this.position.add(delta);
+    var dx = mouse_pos.x - this.previousPoint.x,
+        dy = mouse_pos.y - this.previousPoint.y,
+        diff = new SCg.Vector3(dx, dy, 0);
+
+    this.position.add(diff);
     
     for (var i = 0; i < this.points.length; i++) {
-        this.points[i].x += delta.x;
-        this.points[i].y += delta.y;
+        this.points[i].x += diff.x;
+        this.points[i].y += diff.y;
     }
 
-    var new_pos = this.source.position.clone().add(delta);
+    var new_pos = this.source.position.clone().add(diff);
     this.source.setPosition(new_pos);
+
+
+    this.previousPoint.x = mouse_pos.x;
+    this.previousPoint.y = mouse_pos.y;
 
     this.need_observer_sync = true;
 
