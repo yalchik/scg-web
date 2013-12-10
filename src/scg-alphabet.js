@@ -310,5 +310,30 @@ var SCgAlphabet = {
             d3_group.selectAll('path').attr('stroke', '#f00');
         }
         
+    },
+	
+	updateBus: function(bus, d3_group) {
+                
+        var pos_src = bus.source_pos.clone();
+        
+        // make position path
+        var position_path = 'M' + pos_src.x + ',' + pos_src.y;
+        for (idx in bus.points) {
+            position_path += 'L' + bus.points[idx].x + ',' + bus.points[idx].y;
+        }
+        
+        if (d3_group[0][0].childElementCount == 0) {
+            
+            d3_group.append('svg:path').classed('SCgBusPath', true).attr('d', position_path);
+            
+            // if it accessory, then append main line
+            
+            
+        } else { 
+            // update existing
+            d3_group.selectAll('path')
+                .attr('d', position_path);
+        }
+        
     }
 };
