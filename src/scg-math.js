@@ -7,7 +7,7 @@ SCg.Vector2.prototype = {
     constructor: SCg.Vector2,
     
     copyFrom: function(other) {
-        this.x = ohter.x;
+        this.x = other.x;
         this.y = other.y;
         
         return this;

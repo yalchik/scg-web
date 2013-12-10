@@ -158,6 +158,21 @@
 //                editor.scene.appendContour(model_contour);
 //                contours.push(model_contour);
 				
+//				var buses = [];
+//				var model_bus = new SCg.ModelBus({ 
+//													source: nodes[0] 
+//												});
+//
+//				model_bus.setPoints([
+//								{ x: 700, y: 400, idx: 0 },
+//							{ x: 400, y: 400, idx: 1 }
+//				]);
+//
+//				var pos = new SCg.Vector2(700, 400);
+//				model_bus.setSourceDot(nodes[0].calculateDotPos(pos));
+//				editor.scene.appendBus(model_bus);
+//				buses.push(model_bus);
+//
 				editor.render.update();
 				editor.scene.layout();
 			});

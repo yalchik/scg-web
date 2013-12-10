@@ -1,3 +1,574 @@
+/* --- gwf-file-loader.js --- */
+GwfFileLoader = {
+
+    load: function (args) {
+
+
+        var reader = new FileReader();
+
+        var is_file_correct;
+        reader.onload = function (e) {
+            var text = e.target.result;
+//            console.log(text);
+//            text = text.replace("windows-1251","utf-8");
+            is_file_correct = GwfObjectInfoReader.read(text.replace(
+                "<?xml version=\"1.0\" encoding=\"windows-1251\"?>",
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            ));
+
+        }
+
+        reader.onloadend = function (e) {
+            if (is_file_correct != false) {
+                ScgObjectBuilder.buildObjects(GwfObjectInfoReader.objects_info);
+                args["render"].update();
+            } else
+                GwfObjectInfoReader.printErrors();
+
+        }
+        reader.readAsText(args["file"], "CP1251");
+//        reader.readAsText(args["file"]);
+        return true;
+    }
+}
+
+/* --- gwf-model-objects.js --- */
+var GwfObjectController = {
+    x_offset: 0,
+    y_offset: 0,
+
+    fixOffsetOfPoints: function (args) {
+        var x = parseFloat(args.x);
+        var y = parseFloat(args.y);
+
+        if (x < this.x_offset)
+            this.x_offset = x;
+
+        if (y < this.y_offset)
+            this.y_offset = y;
+    },
+
+    getXOffset: function () {
+        return Math.abs(this.x_offset) + 60;
+    },
+
+    getYOffset: function () {
+        return Math.abs(this.y_offset) + 30;
+    }
+}
+
+var GwfObject = function (args) {
+
+    this.id = -1;
+    this.attributes = {};
+    this.required_attrs = [];
+
+}
+
+GwfObject.prototype = {
+    constructor: GwfObject
+}
+
+GwfObject.prototype.parseObject = function (args) {
+
+}
+
+GwfObject.prototype.buildObject = function (args) {
+
+}
+
+
+GwfObject.prototype.parsePoints = function (args) {
+
+    var gwf_object = args.gwf_object;
+    var reader = args.reader;
+
+    var points = gwf_object.getElementsByTagName("points")[0].getElementsByTagName("point");
+    this.attributes.points = [];
+    for (var i = 0; i < points.length; i++) {
+        var point = reader.fetchAttributes(points[i], ["x", "y"]);
+        this.attributes.points.push(point);
+        GwfObjectController.fixOffsetOfPoints({x: point["x"], y: point["y"]});
+    }
+}
+
+GwfObject.prototype.fixParent = function (args) {
+
+
+    var parent = this.attributes["parent"];
+
+    if (parent != "0") {
+        var parent_object = args.builder.getOrCreate(parent);
+        parent_object.addChild(args.scg_object);
+        args.scg_object.update();
+        parent_object.update();
+    }
+}
+
+
+var GwfObjectNode = function (args) {
+
+    GwfObject.call(this, args);
+    this.required_attrs = ["id", "type", "x", "y", "parent", "idtf"];
+}
+
+GwfObjectNode.prototype = Object.create(GwfObject.prototype);
+
+// have to specify node and reader
+GwfObjectNode.prototype.parseObject = function (args) {
+    var node = args.gwf_object;
+    var reader = args.reader;
+
+    this.attributes = reader.fetchAttributes(node, this.required_attrs);
+
+    if (this.attributes == false)
+        return false;
+
+
+    //fix some attrs
+    this.attributes["type"] = reader.getTypeCode(this.attributes.type);
+    this.attributes["x"] = parseFloat(this.attributes["x"]);
+    this.attributes["y"] = parseFloat(this.attributes["y"]);
+
+    //fixing points
+    GwfObjectController.fixOffsetOfPoints({x: this.attributes["x"], y: this.attributes["y"]});
+
+    this.id = this.attributes["id"];
+    return this;
+}
+
+// have to specify scene,builder
+GwfObjectNode.prototype.buildObject = function (args) {
+    var scene = args.scene;
+    var builder = args.builder;
+
+    var node = scene.createNode(this.attributes["type"], new SCg.Vector3(this.attributes["x"] + GwfObjectController.getXOffset(), this.attributes["y"] + +GwfObjectController.getYOffset(), 0), this.attributes["idtf"]);
+
+    args.scg_object = node;
+
+    this.fixParent(args);
+
+    node.update();
+    return node;
+}
+
+///// pairs
+
+var GwfObjectPair = function (args) {
+    GwfObject.call(this, args);
+
+    this.required_attrs = ["id", "type", "id_b", "id_e", "dotBBalance", "dotEBalance", "idtf"];
+}
+
+GwfObjectPair.prototype = Object.create(GwfObject.prototype);
+
+// have to specify pair and reader
+GwfObjectPair.prototype.parseObject = function (args) {
+    var pair = args.gwf_object;
+    var reader = args.reader;
+
+    this.attributes = reader.fetchAttributes(pair, this.required_attrs);
+
+    if (this.attributes == false)
+        return false;
+
+    //fix some attrs
+
+    this.attributes["type"] = reader.getTypeCode(this.attributes.type);
+    this.attributes["dotBBalance"] = parseFloat(this.attributes["dotBBalance"])
+    this.attributes["dotEBalance"] = parseFloat(this.attributes["dotEBalance"])
+
+    this.id = this.attributes["id"];
+
+    // line points
+
+    this.parsePoints(args);
+
+    return this;
+
+}
+GwfObjectPair.prototype.buildObject = function (args) {
+    var scene = args.scene;
+    var builder = args.builder;
+
+    var source = builder.getOrCreate(this.attributes["id_b"]);
+    var target = builder.getOrCreate(this.attributes["id_e"]);
+
+    var edge = scene.createEdge(source, target, this.attributes["type"]);
+    edge.source_dot = parseFloat(this.attributes["dotBBalance"]);
+    edge.target_dot = parseFloat(this.attributes["dotEBalance"]);
+
+
+    var edge_points = this.attributes["points"];
+    var points = [];
+
+    for (var i = 0; i < edge_points.length; i++) {
+        var edge_point = edge_points[i];
+        var point = new SCg.Vector2(parseFloat(edge_point.x) + GwfObjectController.getXOffset(), parseFloat(edge_point.y) + GwfObjectController.getYOffset());
+        points.push(point);
+    }
+    edge.setPoints(points);
+    source.update();
+    target.update();
+    edge.update();
+
+    return edge;
+}
+
+//contour
+
+var GwfObjectContour = function (args) {
+    GwfObject.call(this, args);
+    this.required_attrs = ["id", "parent"];
+}
+
+GwfObjectContour.prototype = Object.create(GwfObject.prototype);
+
+GwfObjectContour.prototype.parseObject = function (args) {
+    var contour = args.gwf_object;
+    var reader = args.reader;
+
+    this.attributes = reader.fetchAttributes(contour, this.required_attrs);
+
+    if (this.attributes == false)
+        return false;
+
+    this.id = this.attributes['id'];
+
+    //contour points
+    this.parsePoints(args);
+
+    return this;
+}
+
+GwfObjectContour.prototype.buildObject = function (args) {
+    var scene = args.scene;
+
+    var contour_points = this.attributes["points"];
+
+    var verticies = [];
+
+    for (var i = 0; i < contour_points.length; i++) {
+        var contour_point = contour_points[i];
+        var vertex_x = parseFloat(contour_point.x);
+
+        var vertex_y = parseFloat(contour_point.y);
+
+        var vertex = new SCg.Vector3(vertex_x + GwfObjectController.getXOffset(), vertex_y + GwfObjectController.getYOffset(), 0);
+        verticies.push(vertex);
+    }
+
+    var contour = new SCg.ModelContour({
+        verticies: verticies
+    });
+
+    args.scg_object = contour;
+    this.fixParent(args);
+
+    scene.appendContour(contour);
+
+    contour.update();
+    return contour;
+}
+
+var GwfObjectBus = function (args) {
+    GwfObject.call(this, args);
+    this.required_attrs = ["id", "parent", "b_x", "b_y", "e_x", "e_y", "owner", "idtf"];
+}
+
+GwfObjectBus.prototype = Object.create(GwfObject.prototype);
+
+GwfObjectBus.prototype.parseObject = function (args) {
+    var bus = args.gwf_object;
+    var reader = args.reader;
+
+    this.attributes = reader.fetchAttributes(bus, this.required_attrs);
+
+    if (this.attributes == false)
+        return false;
+
+    //fix attrs
+
+    this.attributes["e_x"] = parseFloat(this.attributes["e_x"]);
+    this.attributes["e_y"] = parseFloat(this.attributes["e_y"]);
+
+    GwfObjectController.fixOffsetOfPoints({x: this.attributes["e_x"], y: this.attributes["e_y"]});
+
+    this.id = this.attributes['id'];
+
+    //bus points
+    this.parsePoints(args);
+
+    return this;
+}
+
+GwfObjectBus.prototype.buildObject = function (args) {
+    var scene = args.scene;
+    var builder = args.builder;
+
+
+    var bus = new SCg.ModelBus({});
+
+    bus.setSource(builder.getOrCreate(this.attributes["owner"]));
+    bus.setTargetDot(0);
+
+    var bus_points = this.attributes["points"];
+    var points = [];
+
+    for (var i = 0; i < bus_points.length; i++) {
+        var bus_point = bus_points[i];
+        var point = new SCg.Vector2(parseFloat(bus_point.x) + GwfObjectController.getXOffset(), parseFloat(bus_point.y) + GwfObjectController.getYOffset());
+        points.push(point);
+    }
+
+    points.push(new SCg.Vector2(this.attributes["e_x"] + GwfObjectController.getXOffset(), this.attributes["e_y"] + GwfObjectController.getYOffset()))
+
+    bus.setPoints(points);
+
+    args.scg_object = bus;
+    this.fixParent(args);
+
+
+    scene.appendBus(bus);
+    bus.update();
+    return bus;
+}
+
+
+
+/* --- gwf-object-info-reader.js --- */
+GwfObjectInfoReader = {
+
+    objects_info: { },
+    errors: [],
+
+    gwf_type_to_scg_type: {
+        "node/-/not_define": sc_type_node,
+
+        "node/const/general_node": sc_type_node | sc_type_const,
+        "node/const/asymmetry": sc_type_node | sc_type_const | sc_type_node_tuple,
+        "node/const/nopredmet": sc_type_node | sc_type_const | sc_type_node_struct,
+        "node/const/attribute": sc_type_node | sc_type_const | sc_type_node_role,
+        "node/const/relation": sc_type_node | sc_type_const | sc_type_node_norole,
+        "node/const/material": sc_type_node | sc_type_const | sc_type_node_material,
+        "node/const/group": sc_type_node | sc_type_const | sc_type_node_class,
+        "node/const/predmet": sc_type_node | sc_type_const | sc_type_node_abstract,
+
+        "node/var/general_node": sc_type_node | sc_type_var,
+        "node/var/asymmetry": sc_type_node | sc_type_var | sc_type_node_tuple,
+        "node/var/nopredmet": sc_type_node | sc_type_var | sc_type_node_struct,
+        "node/var/attribute": sc_type_node | sc_type_var | sc_type_node_role,
+        "node/var/relation": sc_type_node | sc_type_var | sc_type_node_norole,
+        "node/var/material": sc_type_node | sc_type_var | sc_type_node_material,
+        "node/var/group": sc_type_node | sc_type_var | sc_type_node_class,
+        "node/var/predmet": sc_type_node | sc_type_var | sc_type_node_abstract,
+
+        "arc/-/-": sc_type_arc_access,
+        "arc/const/fuz/temp": sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_temp,
+        "arc/const/fuz": sc_type_arc_access | sc_type_const | sc_type_arc_fuz | sc_type_arc_perm,
+        "arc/const/pos/temp": sc_type_arc_access | sc_type_const | sc_type_arc_pos | sc_type_arc_temp,
+        "arc/const/pos": sc_type_arc_access | sc_type_const | sc_type_arc_pos | sc_type_arc_perm,
+        "arc/const/neg/temp": sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_temp,
+        "arc/const/neg": sc_type_arc_access | sc_type_const | sc_type_arc_neg | sc_type_arc_perm,
+        "pair/const/orient": sc_type_arc_common | sc_type_const,
+        "pair/const/synonym": sc_type_edge_common | sc_type_const,
+        "pair/orient": sc_type_arc_common,
+
+        "pair/var/orient": sc_type_arc_common | sc_type_var,
+        "arc/var/fuz/temp": sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_temp,
+        "arc/var/fuz": sc_type_arc_access | sc_type_var | sc_type_arc_fuz | sc_type_arc_perm,
+        "arc/var/pos/temp": sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_temp,
+        "arc/var/pos": sc_type_arc_access | sc_type_var | sc_type_arc_pos | sc_type_arc_perm,
+        "arc/var/neg/temp": sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_temp,
+        "arc/var/neg": sc_type_arc_access | sc_type_var | sc_type_arc_neg | sc_type_arc_perm,
+        "pair/var/noorient": sc_type_edge_common | sc_type_var,
+        "pair/var/synonym": sc_type_edge_common | sc_type_var
+    },
+
+    read: function (strs) {
+
+        var xml_doc = (new DOMParser()).parseFromString(strs, "text/xml");
+
+        var root = xml_doc.documentElement;
+
+        if (root.nodeName == "html") {
+            alert(root.getElementsByTagName("div")[0].innerHTML);
+            return false;
+        } else if (root.nodeName != "GWF") {
+            alert("Given document has unsupported format " + root.nodeName);
+            return false;
+        }
+
+        var static_sector = this.parseGroupOfElements(root, "staticSector", true);
+
+        if (static_sector == false)
+            return false;
+
+
+        static_sector = static_sector[0];
+
+        //contours
+
+        var contours = this.parseGroupOfElements(static_sector, "contour", false);
+        this.forEach(contours, this.parseContour);
+
+        //nodes
+        var nodes = this.parseGroupOfElements(static_sector, "node", false);
+        this.forEach(nodes, this.parseNode);
+
+        //buses
+        var buses = this.parseGroupOfElements(static_sector, "bus", false);
+        this.forEach(buses, this.parseBus);
+
+        //arcs
+        var arcs = this.parseGroupOfElements(static_sector, "arc", false);
+        this.forEach(arcs, this.parsePair);
+
+        //pairs
+        var arcs = this.parseGroupOfElements(static_sector, "pair", false);
+        this.forEach(arcs, this.parsePair);
+
+        if (this.errors.length == 0)
+            return true;
+        else
+            return false;
+
+    },
+
+    printErrors: function () {
+        for (var i = 0; i < this.errors.length; i++)
+            console.log(this.errors[i]);
+    },
+
+    parseGroupOfElements: function (parent, tag_name, is_required) {
+        var elements = parent.getElementsByTagName(tag_name);
+        if (elements.length == 0 && is_required == true) {
+            this.errors.push("Unnable to find " + tag_name + " tag");
+            return false;
+        }
+        return elements;
+    },
+
+    parseContour: function (contour) {
+        var parsed_contour = new GwfObjectContour(null);
+
+        var result = parsed_contour.parseObject({gwf_object: contour, reader: this});
+
+        if (result == false)
+            return false;
+
+        this.objects_info[parsed_contour.id] = parsed_contour;
+
+    },
+
+    parsePair: function (pair) {
+        var parsed_pair = new GwfObjectPair(null);
+
+        var result = parsed_pair.parseObject({gwf_object: pair, reader: this});
+
+        if (result == false)
+            return false;
+
+        this.objects_info[parsed_pair.id] = parsed_pair;
+
+    },
+
+    parseNode: function (node) {
+
+        var parsed_node = new GwfObjectNode(null);
+
+
+        if (parsed_node.parseObject({gwf_object: node, reader: this}) == false)
+            return false;
+
+        this.objects_info[parsed_node.id] = parsed_node;
+
+    },
+
+    parseBus: function (bus){
+        var parsed_bus = new GwfObjectBus(null);
+
+        if (parsed_bus.parseObject({gwf_object: bus, reader: this}) == false)
+                    return false;
+        this.objects_info[parsed_bus.id] = parsed_bus;
+    },
+
+    fetchAttributes: function (tag_element, required_attrs) {
+        var tag_attributes = tag_element.attributes;
+        var result_dict = {};
+
+        for (var i = 0; i < required_attrs.length; i++) {
+            var attribute = required_attrs[i];
+            var found_attr = tag_attributes[attribute];
+            if (found_attr != null) {
+                result_dict[found_attr.name] = found_attr.value;
+            } else {
+                this.errors.push("Unnable to find " + attribute + " attribute.");
+                return false;
+            }
+        }
+
+        return result_dict;
+    },
+
+    forEach: function (array, fun) {
+        for (var i = 0; i < array.length; i++)
+            if (fun.call(this, array[i]) == false)
+                return false;
+    },
+
+    getAttr: function (tag, attr_name) {
+        return tag.getAttribute(attr_name);
+    },
+
+    getFloatAttr: function (tag, attr_name) {
+        return parseFloat(this.getAttr(tag, attr_name));
+    },
+    getStrAttr: function (tag, attr_name) {
+
+    },
+
+    getTypeCode: function (gfw_type) {
+        return this.gwf_type_to_scg_type[gfw_type];
+    }
+}
+
+
+/* --- scg-object-builder.js --- */
+ScgObjectBuilder = {
+    scg_objects: {},
+    gwf_objects: {},
+
+    scene: null,
+
+    buildObjects: function (gwf_objects) {
+        this.gwf_objects = gwf_objects;
+
+        for (var gwf_object_id  in gwf_objects) {
+            var gwf_object = gwf_objects[gwf_object_id];
+            if (gwf_object.attributes.id in this.scg_objects == false) {
+                var scg_object = gwf_object.buildObject({
+                    scene: this.scene,
+                    builder: this
+                });
+                this.scg_objects[gwf_object.attributes.id] = scg_object;
+            }
+        }
+    },
+
+    getOrCreate: function (gwf_object_id) {
+        var scg_object;
+        if (gwf_object_id in this.scg_objects == false) {
+            var gwf_object = this.gwf_objects[gwf_object_id];
+            this.scg_objects[gwf_object_id] = gwf_object.buildObject({
+                scene: this.scene,
+                builder: this
+            })
+        }
+        return this.scg_objects[gwf_object_id];
+    }
+}
+
 /* --- scg.js --- */
 var SCg = SCg || { version: "0.1.0" };
 
@@ -217,6 +788,7 @@ SCg.Editor.prototype = {
             self.scene.clearSelection();
         });
 
+
         //problem with opening the same doc twice
         cont.find('#scg-tool-open').click(function(){
             var document = $(this)[0].ownerDocument;
@@ -324,7 +896,7 @@ SCg.Vector2.prototype = {
     constructor: SCg.Vector2,
     
     copyFrom: function(other) {
-        this.x = ohter.x;
+        this.x = other.x;
         this.y = other.y;
         
         return this;
@@ -653,6 +1225,7 @@ SCg.ModelObject = function(options) {
     this.state = SCgObjectState.Normal;
     this.is_selected = false;
     this.scene = null;
+    this.bus = null;
 };
 
 SCg.ModelObject.prototype = {
@@ -678,7 +1251,7 @@ SCg.ModelObject.prototype.setPosition = function(pos) {
 
     this.requestUpdate();
     this.notifyEdgesUpdate();
-	this.notifyBusesUpdate();
+    this.notifyBusUpdate();
 };
 
 /**
@@ -725,16 +1298,14 @@ SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
 };
 
 /**
- * Notify all connected buses to sync
+ * Notify connected bus to sync
  */
-SCg.ModelObject.prototype.notifyBusesUpdate = function() {
+SCg.ModelObject.prototype.notifyBusUpdate = function() {
 
-	if (this.buses != undefined) {
-		for (var i = 0; i < this.buses.length; i++) {
-		   this.buses[i].need_update = true;
-		   this.buses[i].need_observer_sync = true;
-		}
-	}
+    if (this.bus != undefined) {
+        this.bus.need_update = true;
+        this.bus.need_observer_sync = true;
+    }
 };
 
 /** Function iterate all objects, that need to be updated recursively, and 
@@ -745,12 +1316,10 @@ SCg.ModelObject.prototype.requestUpdate = function() {
     for (var i = 0; i < this.edges.length; ++i) {
         this.edges[i].requestUpdate();
     }
-	
-	if (this.buses != undefined) {
-		for (var i = 0; i < this.buses.length; ++i) {
-			this.buses[i].requestUpdate();
-		}
-	}
+    
+    if (this.bus != undefined) {
+        this.bus.requestUpdate();
+    }
 };
 
 /** Updates object state.
@@ -816,6 +1385,14 @@ SCg.ModelObject.prototype.removeEdge = function(edge) {
 };
 
 /**
+ * Remove edge from edges list
+ */
+SCg.ModelObject.prototype.removeBus = function(edge) {
+    
+    this.bus = null;
+};
+
+/**
  * Setup new sc-addr of object
  */
 SCg.ModelObject.prototype.setScAddr = function(addr) {
@@ -842,9 +1419,7 @@ SCg.ModelObject.prototype.setScAddr = function(addr) {
 SCg.ModelNode = function(options) {
 
     SCg.ModelObject.call(this, options);
-	
-	this.buses = [];
-
+    
 };
 
 SCg.ModelNode.prototype = Object.create( SCg.ModelObject.prototype );
@@ -863,7 +1438,6 @@ SCg.ModelNode.prototype.getConnectionPos = function(from, dotPos) {
 
     return result;
 };
-
 
 // --------------- arc -----------
 
@@ -1218,12 +1792,10 @@ SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
         }
     }
     return nearestIntersectionPoint;
- SCg.ModelContour.prototype.removeChild = function(child) {
-    this.childs.remove(child);
- };
- 
+};
+
 SCg.ModelBus = function(options) {
-	
+    
     SCg.ModelObject.call(this, options);
 
     this.source = null;
@@ -1237,6 +1809,7 @@ SCg.ModelBus = function(options) {
     this.source_dot = 0.5;
     this.target_dot = 0.5;
 
+    this.previousPoint = null;
     //this.requestUpdate();
     //this.update();
 };
@@ -1248,7 +1821,7 @@ SCg.ModelBus.prototype.update = function() {
     if (!this.source_pos)
         this.source_pos = this.source.position.clone();
     if (!this.target_pos) {
-	    var target = this.points[this.points.length - 1];
+        var target = this.points[this.points.length - 1];
         this.target_pos = new SCg.Vector3(target.x, target.y, 0);
     }
     SCg.ModelObject.prototype.update.call(this);
@@ -1267,7 +1840,7 @@ SCg.ModelBus.prototype.update = function() {
         if (this.source instanceof SCg.ModelEdge) {
             this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
         } else {
-   			this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
         }
     }
 
@@ -1282,7 +1855,7 @@ SCg.ModelBus.prototype.setSource = function(scg_obj) {
         this.source.removeBus(this);
     
     this.source = scg_obj;
-    this.source.buses.push(this);
+    this.source.bus = this;
     this.need_observer_sync = true;
     this.need_update = true;
 };
@@ -1317,6 +1890,39 @@ SCg.ModelBus.prototype.setPoints = function(points) {
 SCg.ModelBus.prototype.getConnectionPos = SCg.ModelEdge.prototype.getConnectionPos;
 
 SCg.ModelBus.prototype.calculateDotPos = SCg.ModelEdge.prototype.calculateDotPos;
+
+SCg.ModelBus.prototype.changePosition = function(mouse_pos) {
+
+    var dx = mouse_pos.x - this.previousPoint.x,
+        dy = mouse_pos.y - this.previousPoint.y,
+        diff = new SCg.Vector3(dx, dy, 0);
+
+    this.position.add(diff);
+    
+    for (var i = 0; i < this.points.length; i++) {
+        this.points[i].x += diff.x;
+        this.points[i].y += diff.y;
+    }
+
+    var new_pos = this.source.position.clone().add(diff);
+    this.source.setPosition(new_pos);
+
+
+    this.previousPoint.x = mouse_pos.x;
+    this.previousPoint.y = mouse_pos.y;
+
+    this.need_observer_sync = true;
+
+    this.requestUpdate();
+    this.notifyEdgesUpdate();
+};
+
+SCg.ModelBus.prototype.destroy = function() {
+    SCg.ModelObject.prototype.destroy.call(this);
+    
+    if (this.source)
+        this.source.removeBus(this);
+};
 
 /* --- scg-alphabet.js --- */
 var SCgAlphabet = {
@@ -1874,10 +2480,10 @@ SCg.Render.prototype = {
 
         this.d3_contours.exit().remove();
         
-		// update buses visual
+        // update buses visual
         this.d3_buses = this.d3_buses.data(this.scene.buses, function(d) { return d.id; });
-		
-		this.d3_buses.enter().append('svg:g')
+
+        this.d3_buses.enter().append('svg:g')
             .classed('SCgStateNormal', true)
             .classed('SCgBus', true)
             .attr('pointer-events', 'visibleStroke')
@@ -1895,13 +2501,14 @@ SCg.Render.prototype = {
             .on('mouseup', function(d) {
                 self.scene.onMouseUpObject(d);
             });
-		
+        this.d3_buses.exit().remove();
+
         this.updateObjects();
     },
 
     updateObjects: function() {
-        var self = this;
 
+        var self = this;
         this.d3_nodes.each(function (d) {
             
             if (!d.need_observer_sync) return; // do nothing
@@ -1914,12 +2521,12 @@ SCg.Render.prototype = {
                             })
                             
             g.select('use')
-				.attr('xlink:href', function(d) {
-					return '#' + SCgAlphabet.getDefId(d.sc_type); 
-				})
-				.attr("sc_addr", function(d) {
-					return d.sc_addr;
-				});
+                .attr('xlink:href', function(d) {
+                    return '#' + SCgAlphabet.getDefId(d.sc_type); 
+                })
+                .attr("sc_addr", function(d) {
+                    return d.sc_addr;
+                });
             
             g.selectAll('text').text(function(d) { return d.text; });;
         });
@@ -1938,7 +2545,7 @@ SCg.Render.prototype = {
             });
         });
         this.d3_contours.each(function(d) {
-		
+        
             d3.select(this).attr('d', function(d) { 
 
                 if (!d.need_observer_sync) return; // do nothing
@@ -1967,8 +2574,8 @@ SCg.Render.prototype = {
                 return self.d3_contour_line(d.verticies) + 'Z';
             });
         });
-		
-		this.d3_buses.each(function(d) {
+
+        this.d3_buses.each(function(d) {
             
             if (!d.need_observer_sync) return; // do nothing
             d.need_observer_sync = false;
@@ -1995,42 +2602,44 @@ SCg.Render.prototype = {
         points = drag_line_points.data(this.scene.drag_line_points, function(d) { return d.idx; })
         points.exit().remove();
         
-		if (this.scene.edit_mode == SCgEditMode.SCgModeBus) {
-            this.d3_drag_line.classed('dragline', false);	
-            this.d3_drag_line.classed('draglineBus', true);	
+        if (this.scene.edit_mode == SCgEditMode.SCgModeBus) {
+            this.d3_drag_line.classed('dragline', false);   
+            this.d3_drag_line.classed('draglineBus', true); 
 
-			var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
-			if (this.scene.bus_data.end != null) {
-				
-				var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
-				end_point.exit().remove();
-				end_point.enter().append('scg:use')
-				.classed('SCgBusEndPoint', true)
-				.attr('xlink:href', '#dragPoint')
-				.attr('transform', function(d) {
-					return 'translate(' + (d.x + 20) + ',' + d.y + ')';
-				})
-				.on('mouseover', function(d) {
-					d3.select(this).classed('SCgBusEndPointHighlighted', true);
-					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
-				})
-				.on('mouseout', function(d) {
-					d3.select(this).classed('SCgBusEndPointHighlighted', false);
-					d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
-				})
-				.on('mousedown', function(d) {
-					self.scene.finishBusCreation(d.idx);
-					d3.event.stopPropagation();
-				});
-			} 
-			else bus_points.remove();
-		}
-		else if (this.scene.edit_mode == SCgEditMode.SCgModeEdge) {
-		    this.d3_drag_line.classed('SCgBus', false)
-            this.d3_drag_line.classed('dragline', true);	
-            this.d3_drag_line.classed('draglineBus', false);		
-		}
-		
+            var bus_points = this.d3_dragline.selectAll('use.SCgBusEndPoint');
+            if (this.scene.bus_data.end != null) {
+                //if (bus_points.length < 2) d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+                
+                var end_point = bus_points.data([this.scene.bus_data.end], function(d) { return d.idx; });
+                end_point.exit().remove();
+                end_point.enter().append('scg:use')
+                    .classed('SCgBusEndPoint', true)
+                    .attr('xlink:href', '#dragPoint')
+                    .attr('transform', function(d) {
+                        return 'translate(' + (d.x + 20) + ',' + d.y + ')';
+                    })
+                    .on('mouseover', function(d) {
+                        d3.select(this).classed('SCgBusEndPointHighlighted', true);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', true);
+                    })
+                    .on('mouseout', function(d) {
+                        d3.select(this).classed('SCgBusEndPointHighlighted', false);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+                    })
+                    .on('mousedown', function(d) {
+                        self.scene.finishBusCreation(d.idx);
+                        d3.select(self.d3_drag_line[0][0]).classed('SCgBus', false);
+                        d3.event.stopPropagation();
+                    });
+            } 
+            else bus_points.remove();
+        }
+        else if (this.scene.edit_mode == SCgEditMode.SCgModeEdge) {
+            this.d3_drag_line.classed('SCgBus', false)
+            this.d3_drag_line.classed('dragline', true);    
+            this.d3_drag_line.classed('draglineBus', false);        
+        }
+        
         if (this.scene.drag_line_points.length < 1) {
             this.d3_drag_line.classed('hidden', true);
             return;
@@ -2071,9 +2680,9 @@ SCg.Render.prototype = {
                     d3.event.stopPropagation();
                 }
             });
-			
+            
         this.d3_drag_line.classed('hidden', false);        
-		
+        
         var d_str = '';
         // create path description
         for (idx in this.scene.drag_line_points) {
@@ -2244,21 +2853,21 @@ SCg.Scene = function(options) {
     this.drag_line_points = [];
     // points of selected line object
     this.line_points = [];
-    	
+        
     // mouse position
     this.mouse_pos = new SCg.Vector3(0, 0, 0);
     
     // edge source and target
     this.edge_data = {source: null, target: null};
-	
-	// bus source
+    
+    // bus source
     this.bus_data = {source: null, end: null};
-	
+    
     // callback for selection changed
     this.event_selection_changed = null;
     // callback for modal state changes
     this.event_modal_changed = null;
-    
+        
     /* Flag to lock any edit operations
      * If this flag is true, then we doesn't need to process any editor operatons, because
      * in that moment shows modal dialog
@@ -2308,7 +2917,7 @@ SCg.Scene.prototype = {
             this.objects[contour.sc_addr] = contour;
     },
     
-	/**
+    /**
      * Append new sc.g-contour to scene
      * @param {SCg.ModelContour} contour Contour to append
      */
@@ -2316,7 +2925,7 @@ SCg.Scene.prototype = {
         this.buses.push(bus);
         bus.scene = this;
     },
-	
+    
     /**
      * Remove object from scene.
      * @param {SCg.ModelObject} obj Object to remove
@@ -2339,6 +2948,8 @@ SCg.Scene.prototype = {
         } else if (obj instanceof SCg.ModelContour) {
             this.deleteObjects(obj.childs);
             remove_from_list(obj, this.contours);
+        } else if (obj instanceof SCg.ModelBus) {
+            remove_from_list(obj, this.buses);
         }
         
         if (obj.sc_addr)
@@ -2385,15 +2996,15 @@ SCg.Scene.prototype = {
         return edge;
     },
     
-	createBus: function(source) {
+    createBus: function(source) {
         var bus = new SCg.ModelBus({
-                                        source: source
-                                    });
+                                      source: source
+                                  });
         this.appendBus(bus);
         
         return bus;
     },
-	
+    
     /**
      * Delete objects from scene
      * @param {Array} objects Array of sc.g-objects to delete
@@ -2407,6 +3018,9 @@ SCg.Scene.prototype = {
             for (idx in root.edges) {
                 collect_objects(container, root.edges[idx]);
             }
+
+            if (root.bus)
+                collect_objects(container, root.bus);
         }
         
         // collect objects for remove
@@ -2535,7 +3149,7 @@ SCg.Scene.prototype = {
         if (this.selected_objects.length == 1) {
             var obj = this.selected_objects[0];
             
-            if (obj instanceof SCg.ModelEdge) { /* @todo add contour and bus */
+            if (obj instanceof SCg.ModelEdge || obj instanceof SCg.ModelBus) { /* @todo add contour and bus */
                 for (idx in obj.points) {
                     this.line_points.push({pos: obj.points[idx], idx: idx});
                 }
@@ -2555,15 +3169,19 @@ SCg.Scene.prototype = {
         this.mouse_pos.y = y;
         
         if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object) {
-            if (this.focused_object.sc_type & sc_type_node) {
+           if (this.focused_object instanceof SCg.ModelBus) {            
+                this.focused_object.changePosition(new SCg.Vector3(x, y, 0));
+            } else  if (this.focused_object.sc_type & sc_type_node) {
                 this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
             } else if (this.focused_object.sc_type & sc_type_contour) {
                 this.focused_object.setNewPoint(new SCg.Vector3(x, y, 0));
-            }
+            }            
+            
             this.updateObjectsVisual();
         }
-
-        if (this.edit_mode == SCgEditMode.SCgModeEdge || this.edit_mode == SCgEditMode.SCgModeContour || this.edit_mode == SCgEditMode.SCgModeBus) {
+        
+        if (this.edit_mode == SCgEditMode.SCgModeEdge || this.edit_mode == SCgEditMode.SCgModeBus 
+            || this.edit_mode == SCgEditMode.SCgModeContour) {
             this.render.updateDragLine();
         }
     },
@@ -2580,11 +3198,11 @@ SCg.Scene.prototype = {
                 this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
             }
         }
-		
-		if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeBus && this.bus_data.source) {
+        
+        if (!this.pointed_object && this.edit_mode == SCgEditMode.SCgModeBus && this.bus_data.source) {
             this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
-			this.bus_data.end = {x: x, y: y, idx: this.drag_line_points.length};
-		}
+            this.bus_data.end = {x: x, y: y, idx: this.drag_line_points.length};
+        }
     },
     
     onMouseUp: function(x, y) {
@@ -2629,7 +3247,7 @@ SCg.Scene.prototype = {
 
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             this.focused_object = obj;
-            if (obj instanceof SCg.ModelContour) {
+            if (obj instanceof SCg.ModelContour || obj instanceof SCg.ModelBus) {
                 obj.previousPoint = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
             }
         }
@@ -2646,7 +3264,8 @@ SCg.Scene.prototype = {
                     var edge = this.createEdge(this.edge_data.source, obj, sc_type_arc_pos_const_perm);
 
                     var mouse_pos = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
-                    edge.setSourceDot(this.edge_data.source.calculateDotPos(mouse_pos));
+                    var start_pos = new SCg.Vector2(this.drag_line_points[0].x, this.drag_line_points[0].y);
+                    edge.setSourceDot(this.edge_data.source.calculateDotPos(start_pos));
                     edge.setTargetDot(obj.calculateDotPos(mouse_pos));
 
                     if (this.drag_line_points.length > 1) {
@@ -2661,14 +3280,13 @@ SCg.Scene.prototype = {
                 }
             }
         }
-
-		if (this.edit_mode == SCgEditMode.SCgModeBus) {
-		
-			if (!this.bus_data.source) {
-				this.bus_data.source = obj;
-				this.drag_line_points.push({x: this.mouse_pos.x, y: this.mouse_pos.y, idx: this.drag_line_points.length});
-			}
-		}
+        if (this.edit_mode == SCgEditMode.SCgModeBus) {
+        
+            if (!this.bus_data.source && !obj.bus && !(obj instanceof SCg.ModelBus)) {
+                this.bus_data.source = obj;
+                this.drag_line_points.push({x: this.mouse_pos.x, y: this.mouse_pos.y, idx: this.drag_line_points.length});
+            }
+        }
     },
     
     onMouseUpObject: function(obj) {
@@ -2734,9 +3352,9 @@ SCg.Scene.prototype = {
         
         this.focused_object = null;
         this.edge_data.source = null; this.edge_data.target = null;
-		
+        
         this.bus_data.source = null;
-		
+        
         this.resetEdgeMode();
     },
     
@@ -2763,21 +3381,22 @@ SCg.Scene.prototype = {
      * @param {Integer} idx Index of drag point to revert.
      */
     revertDragPoint: function(idx) {
-        if (this.edit_mode != SCgEditMode.SCgModeEdge && this.edit_mode != SCgEditMode.SCgModeContour && this.edit_mode != SCgEditMode.SCgModeBus) {
+
+        if (this.edit_mode != SCgEditMode.SCgModeEdge && this.edit_mode != SCgEditMode.SCgModeBus && this.edit_mode != SCgEditMode.SCgModeContour) {
             SCgDebug.error('Work with drag point in incorrect edit mode');
             return;
         }
         
         this.drag_line_points.splice(idx, this.drag_line_points.length - idx);
         
-		if (this.drag_line_points.length >= 2)
-			this.bus_data.end = this.drag_line_points[this.drag_line_points.length - 1];
-		else
-			this.bus_data.end = null;
-		
+        if (this.drag_line_points.length >= 2)
+            this.bus_data.end = this.drag_line_points[this.drag_line_points.length - 1];
+        else
+            this.bus_data.end = null;
+        
         if (this.drag_line_points.length == 0) {
             this.edge_data.source = this.edge_data.target = null;
-			this.bus_data.source = null;
+            this.bus_data.source = null;
         }
         this.render.updateDragLine();
     },
@@ -2792,7 +3411,7 @@ SCg.Scene.prototype = {
         }
         
         var edge = this.selected_objects[0];
-        if (!(edge instanceof SCg.ModelEdge)) {
+        if (!(edge instanceof SCg.ModelEdge) && !(edge instanceof SCg.ModelBus)) {
             SCgDebug.error("Selected object isn't an edge");
             return;
         }
@@ -2811,6 +3430,27 @@ SCg.Scene.prototype = {
         this.updateObjectsVisual();
         this.render.updateLinePoints();
     },
+
+    finishBusCreation: function() {
+        
+        var bus = this.createBus(this.bus_data.source);                    
+                    
+        if (this.drag_line_points.length > 1) {
+            bus.setPoints(this.drag_line_points.slice(1));
+        }       
+        var pos = new SCg.Vector2(this.drag_line_points[0].x, this.drag_line_points[0].y);
+
+        bus.setSourceDot(this.bus_data.source.calculateDotPos(pos));
+        bus.setTargetDot(0);
+         
+        this.bus_data.source = this.bus_data.end = null;
+
+        this.drag_line_points.splice(0, this.drag_line_points.length);
+
+        this.updateRender();
+        this.render.updateDragLine();
+     },
+
     createCurrentContour: function() {
         if (this.drag_line_points.length < 3) {
             SCgDebug.error('Set at least 3 points for contour');
@@ -2832,27 +3472,6 @@ SCg.Scene.prototype = {
         this.updateRender();
         this.render.updateDragLine();
     },
-
-	finishBusCreation: function() {
-		
-		var bus = this.createBus(this.bus_data.source);
-                    
-        var mouse_pos = new SCg.Vector2(this.mouse_pos.x, this.mouse_pos.y);
-                    
-        if (this.drag_line_points.length > 1) {
-            bus.setPoints(this.drag_line_points.slice(1));
-         }		 
-		 
-        bus.setSourceDot(this.bus_data.source.calculateDotPos(mouse_pos));
-        bus.setTargetDot(0);
-		 
-         this.bus_data.source = this.bus_data.end = null;
-                    
-         this.drag_line_points.splice(0, this.drag_line_points.length);
-                    
-         this.updateRender();
-         this.render.updateDragLine();
-	},
 
     // ------------- events -------------
     _fireSelectionChanged: function() {

@@ -59,6 +59,7 @@ SCg.ModelObject = function(options) {
     this.state = SCgObjectState.Normal;
     this.is_selected = false;
     this.scene = null;
+    this.bus = null;
 };
 
 SCg.ModelObject.prototype = {
@@ -84,7 +85,7 @@ SCg.ModelObject.prototype.setPosition = function(pos) {
 
     this.requestUpdate();
     this.notifyEdgesUpdate();
-	this.notifyBusesUpdate();
+    this.notifyBusUpdate();
 };
 
 /**
@@ -131,16 +132,14 @@ SCg.ModelObject.prototype.notifyEdgesUpdate = function() {
 };
 
 /**
- * Notify all connected buses to sync
+ * Notify connected bus to sync
  */
-SCg.ModelObject.prototype.notifyBusesUpdate = function() {
+SCg.ModelObject.prototype.notifyBusUpdate = function() {
 
-	if (this.buses != undefined) {
-		for (var i = 0; i < this.buses.length; i++) {
-		   this.buses[i].need_update = true;
-		   this.buses[i].need_observer_sync = true;
-		}
-	}
+    if (this.bus != undefined) {
+        this.bus.need_update = true;
+        this.bus.need_observer_sync = true;
+    }
 };
 
 /** Function iterate all objects, that need to be updated recursively, and 
@@ -151,12 +150,10 @@ SCg.ModelObject.prototype.requestUpdate = function() {
     for (var i = 0; i < this.edges.length; ++i) {
         this.edges[i].requestUpdate();
     }
-	
-	if (this.buses != undefined) {
-		for (var i = 0; i < this.buses.length; ++i) {
-			this.buses[i].requestUpdate();
-		}
-	}
+    
+    if (this.bus != undefined) {
+        this.bus.requestUpdate();
+    }
 };
 
 /** Updates object state.
@@ -222,6 +219,14 @@ SCg.ModelObject.prototype.removeEdge = function(edge) {
 };
 
 /**
+ * Remove edge from edges list
+ */
+SCg.ModelObject.prototype.removeBus = function(edge) {
+    
+    this.bus = null;
+};
+
+/**
  * Setup new sc-addr of object
  */
 SCg.ModelObject.prototype.setScAddr = function(addr) {
@@ -248,9 +253,7 @@ SCg.ModelObject.prototype.setScAddr = function(addr) {
 SCg.ModelNode = function(options) {
 
     SCg.ModelObject.call(this, options);
-	
-	this.buses = [];
-
+    
 };
 
 SCg.ModelNode.prototype = Object.create( SCg.ModelObject.prototype );
@@ -269,7 +272,6 @@ SCg.ModelNode.prototype.getConnectionPos = function(from, dotPos) {
 
     return result;
 };
-
 
 // --------------- arc -----------
 
@@ -625,12 +627,9 @@ SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
     }
     return nearestIntersectionPoint;
 };
- SCg.ModelContour.prototype.removeChild = function(child) {
-    this.childs.remove(child);
- };
- 
+
 SCg.ModelBus = function(options) {
-	
+    
     SCg.ModelObject.call(this, options);
 
     this.source = null;
@@ -644,6 +643,7 @@ SCg.ModelBus = function(options) {
     this.source_dot = 0.5;
     this.target_dot = 0.5;
 
+    this.previousPoint = null;
     //this.requestUpdate();
     //this.update();
 };
@@ -655,7 +655,7 @@ SCg.ModelBus.prototype.update = function() {
     if (!this.source_pos)
         this.source_pos = this.source.position.clone();
     if (!this.target_pos) {
-	    var target = this.points[this.points.length - 1];
+        var target = this.points[this.points.length - 1];
         this.target_pos = new SCg.Vector3(target.x, target.y, 0);
     }
     SCg.ModelObject.prototype.update.call(this);
@@ -674,7 +674,7 @@ SCg.ModelBus.prototype.update = function() {
         if (this.source instanceof SCg.ModelEdge) {
             this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
         } else {
-   			this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
+            this.source_pos = this.source.getConnectionPos(this.target_pos, this.source_dot);
         }
     }
 
@@ -689,7 +689,7 @@ SCg.ModelBus.prototype.setSource = function(scg_obj) {
         this.source.removeBus(this);
     
     this.source = scg_obj;
-    this.source.buses.push(this);
+    this.source.bus = this;
     this.need_observer_sync = true;
     this.need_update = true;
 };
@@ -724,3 +724,36 @@ SCg.ModelBus.prototype.setPoints = function(points) {
 SCg.ModelBus.prototype.getConnectionPos = SCg.ModelEdge.prototype.getConnectionPos;
 
 SCg.ModelBus.prototype.calculateDotPos = SCg.ModelEdge.prototype.calculateDotPos;
+
+SCg.ModelBus.prototype.changePosition = function(mouse_pos) {
+
+    var dx = mouse_pos.x - this.previousPoint.x,
+        dy = mouse_pos.y - this.previousPoint.y,
+        diff = new SCg.Vector3(dx, dy, 0);
+
+    this.position.add(diff);
+    
+    for (var i = 0; i < this.points.length; i++) {
+        this.points[i].x += diff.x;
+        this.points[i].y += diff.y;
+    }
+
+    var new_pos = this.source.position.clone().add(diff);
+    this.source.setPosition(new_pos);
+
+
+    this.previousPoint.x = mouse_pos.x;
+    this.previousPoint.y = mouse_pos.y;
+
+    this.need_observer_sync = true;
+
+    this.requestUpdate();
+    this.notifyEdgesUpdate();
+};
+
+SCg.ModelBus.prototype.destroy = function() {
+    SCg.ModelObject.prototype.destroy.call(this);
+    
+    if (this.source)
+        this.source.removeBus(this);
+};
