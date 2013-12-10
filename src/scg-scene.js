@@ -574,6 +574,7 @@ SCg.Scene.prototype = {
      * @param {Integer} idx Index of drag point to revert.
      */
     revertDragPoint: function(idx) {
+
         if (this.edit_mode != SCgEditMode.SCgModeEdge && this.edit_mode != SCgEditMode.SCgModeBus && this.edit_mode != SCgEditMode.SCgModeContour) {
             SCgDebug.error('Work with drag point in incorrect edit mode');
             return;
@@ -664,7 +665,7 @@ SCg.Scene.prototype = {
         this.updateRender();
         this.render.updateDragLine();
     },
-        
+
     // ------------- events -------------
     _fireSelectionChanged: function() {
         if (this.event_selection_changed)

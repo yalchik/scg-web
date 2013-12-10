@@ -239,7 +239,7 @@ SCg.Render.prototype = {
 
     updateObjects: function() {
 
-        var self = this
+        var self = this;
         this.d3_nodes.each(function (d) {
             
             if (!d.need_observer_sync) return; // do nothing
@@ -275,7 +275,6 @@ SCg.Render.prototype = {
                 return d.is_selected;
             });
         });
-
         this.d3_contours.each(function(d) {
         
             d3.select(this).attr('d', function(d) { 
@@ -284,9 +283,6 @@ SCg.Render.prototype = {
 
                 if (d.need_update)
                     d.update();
-
-               // return self.d3_contour_line(d.verticies) + 'Z'; 
-
 
                 var d3_contour = d3.select(this);
 
@@ -320,7 +316,7 @@ SCg.Render.prototype = {
             var d3_bus = d3.select(this);
             SCgAlphabet.updateBus(d, d3_bus);
             d3_bus.classed('SCgStateSelected', function(d) {
-                return d.is_selected;       
+                return d.is_selected;
             });
         });
     },

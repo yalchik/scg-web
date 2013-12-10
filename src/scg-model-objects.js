@@ -591,7 +591,6 @@ SCg.ModelContour.prototype.addChild = function(child) {
  * Remove child from contour
  * @param {SCg.ModelObject} child Child object for remove
  */
-
 SCg.ModelContour.prototype.removeChild = function(child) {
     var idx = this.childs.indexOf(child);
     this.childs.splice(idx, 1);
