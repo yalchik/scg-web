@@ -1,38 +1,33 @@
 """
 Concatenates all js files from specified directory to the single js file.
 Usage example:
-concatenate_js.py <js_source_dir> <concatenated_file.js>
+concatenate_js.py <path to build file json> <flag to build component interface>
 """
-import sys
-import os
+import sys, os
+import simplejson as json
 
-sources = [
-        'gwf-file-loader.js',
-        'gwf-model-objects.js',
-        'gwf-object-info-reader.js',
-        'scg-object-builder.js',
-        'scg.js',
-        'scg-debug.js',
-        'scg-math.js',
-        'scg-model-objects.js',
-        'scg-alphabet.js',
-        'scg-render.js',
-        #'scg-render-objects.js',
-        'scg-scene.js',
-        'scg-layout.js',
-        'scg-component.js'
+def create_file(build_file, build_component):
 
-        ]
+    path, fn = os.path.split(build_file)
+    
+    f = open(build_file)
+    config = json.load(f)
+    f.close()
+    
+    target_file_path = os.path.join(path, config['target'])
+    if build_component == 1:
+        config['sources'].append(config['component'])
 
-def create_file(source_dir, target_file_path):
     lines = []
-    for src in sources:
+    for src in config['sources']:
+        print src
         lines.append("/* --- %s --- */\n" % src)
-        f = open(os.path.join('src', src), 'r')
+        f = open(os.path.join(path, src), 'r')
         lines.extend(f.readlines())
         f.close()
         lines.append("\n\n")
 
+    print "Write file: %s" % target_file_path
     target_dir = '/'.join(target_file_path.split('/')[:-1])
     if not os.path.isdir(target_dir) and len(target_dir) > 0:
         os.makedirs(target_dir)
@@ -42,4 +37,7 @@ def create_file(source_dir, target_file_path):
     concatenated_file.close()
 
 if __name__ == '__main__':
-    create_file(sys.argv[1], sys.argv[2])
+    if len(sys.argv) > 2:
+        create_file(sys.argv[1], int(sys.argv[2]))
+    else:
+        create_file(sys.argv[1], 0)
