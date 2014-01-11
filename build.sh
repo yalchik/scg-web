@@ -1,6 +1,6 @@
 #!/bin/sh
 
-choice=""
+component=""
 
 echo
 echo "Select component to build"
@@ -36,4 +36,5 @@ esac
 echo
 echo "Start building"
 python scripts/concatenate_js.py $build_file $build_interface_flag
+
 

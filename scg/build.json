@@ -17,5 +17,5 @@
 	
 	"component": "src/scg-component.js",
 
-	"target": "js/scg.js"
+	"target": "static/components/js/scg/scg.js"
 }
