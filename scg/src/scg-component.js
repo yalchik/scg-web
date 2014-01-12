@@ -1,5 +1,5 @@
 SCgComponent = {
-	ext_lang: 'scg_code',
+    ext_lang: 'scg_code',
     formats: ['hypermedia_format_scg_json'],
     factory: function(sandbox) {
         return new scgViewerWindow(sandbox);
@@ -126,12 +126,12 @@ scgViewerWindow.prototype = {
     },
 
     applyTranslation: function(namesMap){
-		for (addr in namesMap) {
-			var obj = this.editor.scene.getObjectByScAddr(addr);
-			if (obj) {
-				obj.text = namesMap[addr];
-			}
-		}
+        for (addr in namesMap) {
+            var obj = this.editor.scene.getObjectByScAddr(addr);
+            if (obj) {
+                obj.text = namesMap[addr];
+            }
+        }
             
         this.editor.render.updateTexts();
     }
