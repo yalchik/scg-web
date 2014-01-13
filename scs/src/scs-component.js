@@ -73,7 +73,7 @@ SCsViewer.prototype = {
                 $(element).text(namesMap[addr]);
             } else {
                 if (!$(element).hasClass('scs-scn-content'))
-                    $(element).text('●');
+                    $(element).html('<b>ⵔ</b>');
             }
         });
     },
