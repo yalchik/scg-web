@@ -104,7 +104,8 @@ SCs.SCnTree.prototype = {
                 ++idx;
             }
         }
-    }
+    },
+    
     
 };
 

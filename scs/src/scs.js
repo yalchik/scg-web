@@ -2,6 +2,12 @@ var SCs = SCs || { version: "0.1.0" };
 
 SCs.Connectors = {};
 SCs.SCnConnectors = {};
+SCs.SCnSortOrder = [,
+                'nrel_main_idtf',
+                'nrel_system_identifier',
+                'nrel_idtf',
+                'nrel_section_decomposition'
+                ];
 
 $(document).ready(function() {
     SCs.Connectors[sc_type_edge_common] = {f: "<>", b: "<>"};

@@ -3,16 +3,19 @@ SCs.SCnOutput = function() {
 
 SCs.SCnOutput.prototype = {
     
-    init: function(tree, container) {
+    init: function(tree, container, keynode_func) {
         this.tree = tree;
         this.container = container;
         this.sc_links = [];
         this.linkCounter = 0;
+        this.getKeynode = keynode_func;
     },
 
     /*! Returns string that contains html representation of scn-text
      */
     toHtml: function() {
+        this.treeSort();
+
         var output = '';
         for (idx in this.tree.nodes) {
             output += this.treeNodeHtml(this.tree.nodes[idx]);
@@ -68,5 +71,57 @@ SCs.SCnOutput.prototype = {
             return '<a href="#" class="scs-scn-element scs-scn-field" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a>';
         }
     },
+
+    /*! Sort tree elements
+     */
+    treeSort: function() {
+        var queue = [];
+        for (idx in this.tree.nodes) {
+            queue.push(this.tree.nodes[idx]);
+        }
+
+        // prepare order map
+        var orderMap = {}; 
+        for (idx in SCs.SCnSortOrder) {
+            var addr = this.getKeynode(SCs.SCnSortOrder[idx]);
+            if (addr)
+                orderMap[addr] = idx;
+        }
+
+        function sortCompare(a, b) {
+            // determine order by attributes
+            function minOrderAttr(attrs) {
+                var res = null;
+                for (i in attrs) {
+                    var v = orderMap[attrs[i].n.addr];
+                    if (!res || (v && v < res)) {
+                        res = v;
+                    }
+                }
+                return res;
+            }
+            
+            var orderA = minOrderAttr(a.attrs);
+            var orderB = minOrderAttr(b.attrs);
+            
+            if (orderA && orderB) {
+                return orderA - orderB;
+            } else {
+                if (!orderA) return 1;
+                if (!orderB) return -1;
+            }
+            
+            return 0;
+        }
+
+        while (queue.length > 0) {
+            var node = queue.shift();
+
+            node.childs.sort(sortCompare);
+            for (idx in node.childs) {
+                queue.push(node.childs[idx]);
+            }
+        }
+    }
 
 };

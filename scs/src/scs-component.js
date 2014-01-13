@@ -3,6 +3,9 @@ SCsComponent = {
     formats: ['format_scs_json'],
     factory: function(sandbox) {
         return new SCsViewer(sandbox);
+    },
+    getRequestKeynodes: function() {
+        return SCs.SCnSortOrder;
     }
 };
 
@@ -46,7 +49,7 @@ SCsViewer.prototype = {
         });
         
         this.viewer = new SCs.Viewer();
-        this.viewer.init(sandbox.container);
+        this.viewer.init(sandbox.container, $.proxy(sandbox.getKeynode, sandbox));
     },
     
     // ---- window interface -----
