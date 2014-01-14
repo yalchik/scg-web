@@ -297,7 +297,7 @@ SCs.SCnOutput.prototype = {
             node.setOrder = {};
             var values = [];
             for (key in setOrder) {
-                values.push(node.setOrder[key]);
+                values.push(setOrder[key]);
             }
             var src = null;
             for (key in setOrder) {
