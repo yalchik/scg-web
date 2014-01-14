@@ -8,6 +8,7 @@ SCs.SCnTree.prototype = {
         this.nodes = [];
         this.addrs = [];    // array of sc-addrs
         this.links = [];
+        this.triples = [];
     },
     
     /**
@@ -25,7 +26,7 @@ SCs.SCnTree.prototype = {
      */
     build: function(keywords, triples) {
         var queue = [];
-        
+        this.triples = triples;
         // first of all we need to create root nodes for all keywords
         for (i in keywords) {
             var node = new SCs.SCnTreeNode();
@@ -53,13 +54,13 @@ SCs.SCnTree.prototype = {
                 var found = false;
                 var backward = false;
                 
-                if (!tpl.output) {
+                if (!tpl.output && !tpl.ignore) {
                     // arc attributes
                     if (node.type == SCs.SCnTreeNodeType.Sentence) {
                         if ((tpl[0].type & (sc_type_node_role | sc_type_node_norole)) 
                                 && (tpl[1].type & sc_type_arc_pos_const_perm | sc_type_var)
                                 && tpl[2].addr == node.predicate.addr) {
-                            node.attrs.push({n: tpl[0], a: tpl[1]});
+                            node.attrs.push({n: tpl[0], a: tpl[1], triple: tpl});
                             tpl.output = true;
                             
                             this._appendAddr(tpl[0]);
@@ -89,8 +90,10 @@ SCs.SCnTree.prototype = {
                         nd.level = node.level + 1;
                         nd.parent = node;
                         nd.backward = backward;
+                        tpl.scn = { treeNode: nd };
                         
                         node.childs.push(nd);
+                        nd.triple = tpl;
                         tpl.output = true;
                         
                         queue.push(nd);
@@ -106,6 +109,42 @@ SCs.SCnTree.prototype = {
         }
     },
     
+    /*! Destroy whole node sub-trees of specified node.
+     * @param {Object} node Node to destroy
+     */
+    destroySubTree: function(node) {
+        var queue = [node];
+        
+        while (queue.length > 0) {
+            var n = queue.shift();
+            for (idx in n.childs) {
+                queue.push(n.childs[idx]);
+            }
+            
+            // remove from parent
+            if (n.parent) {
+                for (idx in n.parent.childs) {
+                    var i = n.parent.childs.indexOf(n);
+                    if (i >= 0) {
+                        n.parent.childs.splice(i, 1);
+                    }
+                }
+            }
+            
+            for (idx in n.attrs) {
+                n.attrs[idx].triple.ouput = false;
+            }
+            
+            n.triple.output = false;
+            n.triple = null;
+            n.parent = null;
+            
+            for (idx in node.childs) {
+                queue.push(node.childs[idx]);
+            }
+            node.childs.splice(0, node.childs.length);
+        }
+    }
     
 };
 
