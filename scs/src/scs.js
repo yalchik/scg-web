@@ -9,6 +9,8 @@ SCs.SCnSortOrder = [,
                 'nrel_section_decomposition'
                 ];
 
+SCs.SCnBallMarker = '●';
+
 $(document).ready(function() {
     SCs.Connectors[sc_type_edge_common] = {f: "<>", b: "<>"};
     SCs.Connectors[sc_type_arc_common] = {f: ">", b: "<"};
