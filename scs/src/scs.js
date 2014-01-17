@@ -6,6 +6,7 @@ SCs.SCnSortOrder = [,
                 'nrel_main_idtf',
                 'nrel_system_identifier',
                 'nrel_idtf',
+                'nrel_section_base_order',
                 'nrel_section_decomposition'
                 ];
 

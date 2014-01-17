@@ -26,11 +26,19 @@
 
 /* SCn */
 .scs-scn-content {
+    position: relative;
     border: solid 1px #cccccc;
     background-color: #fff;
     padding: 3px;
     display: inline-block;
-    background:url("../images/scn/content_corner.png") 0 0 no-repeat #fafafa;
+    /*background:url("../images/scn/content_corner.png") 0 0 no-repeat #fafafa;*/
+}
+
+.scs-scn-content:before {
+    position: absolute;
+    top: -8px;
+    left: -1px;
+    content: url("../images/scn/content_corner.png");
 }
 
 .scs-scn-contour {
@@ -72,4 +80,39 @@
     vertical-align: text-top;
     font-family: "Unicode Symbols", "Times New Roman", "Apple Symbols","Arial Unicode MS";
     color: #2a6496;
+}
+
+
+// --- Print preview ---
+.print-preview .scs-scn-element {
+    color: #000;
+    font-size: 12px;
+}
+
+.print-preview a {
+    color: #000;
+}
+
+.print-preview .scs-scn-field-marker {
+    color: #000;
+}
+
+@media print {
+    .scs-scn-element {
+        font-size: 12px;
+    }
+
+    .scs-scn-field-marker {
+        width: 15px;
+        text-align: left;
+        float: left;
+        margin-top: 2px;
+    }
+
+    .scs-scn-content:before {
+        position: absolute;
+        top: -6px;
+        left: -1px;
+        content: url("../images/scn/content_corner.png");
+    }
 }
