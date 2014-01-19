@@ -23,6 +23,7 @@ SCs.SCnOutput.prototype = {
         for (idx in this.tree.nodes) {
             output += this.treeNodeHtml(this.tree.nodes[idx]);
         }
+
         return output;
     },
 
@@ -43,8 +44,17 @@ SCs.SCnOutput.prototype = {
         }
 
         if (treeNode.type == SCs.SCnTreeNodeType.Keyword) {
-            output = '<div class="scs-scn-field"><div class="scn-keyword"><a href="#" class="scs-scn-element" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a></div>';
+            output = '<div class="scs-scn-field"><div class="scs-scn-keyword"><a href="#" class="scs-scn-element" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a></div>';
             output += childsToHtml();
+
+            var contourTree = this.tree.subtrees[treeNode.element.addr];
+            if (contourTree) {
+                output += '<div class="scs-scn-field-marker scs-scn-element">=</div>'
+                        + '<div class="scs-scn-element scs-scn-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
+                        + this.subtreeToHtml(contourTree)
+                        + '</div>';
+            }
+
             output += '</div>';
         } else {
             var marker = SCs.SCnConnectors[treeNode.predicate.type];
@@ -90,11 +100,10 @@ SCs.SCnOutput.prototype = {
                 output += '}';
                 output += childsToHtml();
             }
-            output += '</div>';
-
-
-            output += '</div>';
+            output += '</div></div>';
         }
+
+        
 
         return output;
     },
@@ -107,20 +116,21 @@ SCs.SCnOutput.prototype = {
             this.sc_links[containerId] = treeNode.element.addr;
             return '<div class="scs-scn-element scs-scn-content scs-scn-field" id="' + containerId + '" sc_addr="' + treeNode.element.addr + '">' + '</div>';
         }
-
-       /* if (treeNode.isSet) {
-            var res = '';
-            res += '{';
-            for (idx in treeNode.childs) {
-                if (!treeNode.childs[idx].isSetElement) continue;
-                res += this.treeNodeHtml(treeNode.childs[idx]);
-            }
-            res += '}';
-            
-            return res;
-        }*/
         
         return '<a href="#" class="scs-scn-element scs-scn-field" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a>';
+    },
+
+    subtreeToHtml: function(subtree) {
+        var scnOutput = new SCs.SCnOutput();
+        scnOutput.init(subtree, this.container, this.getKeynode);
+        scnOutput.linkCounter = this.linkCounter;
+
+        var res = scnOutput.toHtml();
+        this.linkCounter = scnOutput.linkCounter;
+        for (j in scnOutput.sc_links) {
+            this.sc_links[j] = scnOutput.sc_links[j];
+        }
+        return res;
     },
 
     /*! Sort tree elements

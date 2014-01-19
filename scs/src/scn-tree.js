@@ -4,11 +4,13 @@ SCs.SCnTree = function() {
 
 SCs.SCnTree.prototype = {
     
-    init: function() {
+    init: function(contourAddr) {
         this.nodes = [];
         this.addrs = [];    // array of sc-addrs
         this.links = [];
         this.triples = [];
+        this.subtrees = {}; // dictionary of subtrees (contours)
+        this.contourAddr = contourAddr;    // sc-addr of contour, that structure build with this tree
     },
     
     /**
@@ -20,13 +22,132 @@ SCs.SCnTree.prototype = {
         }
     },
     
+    /** Determine all subtrees in triples
+     */
+    determineSubTrees: function() {
+        
+        // collect subtree elements
+        var subtrees = {};
+        var idx = 0;
+        
+        function isElementExist(st, addr) {
+            for (j in st.elements) {
+                if (st.elements[j].el.addr == addr)
+                    return true;
+            }
+            return false;
+        }
+
+        while (idx < this.triples.length) {
+            var tpl = this.triples[idx];
+            
+            if ((tpl[1].type != sc_type_arc_pos_const_perm) || !(tpl[0].type & sc_type_node_struct) || (tpl[0].addr == this.contourAddr)) {
+                idx++;
+                continue;
+            }
+            
+            tpl.ignore = true;
+            var st = subtrees[tpl[0].addr];
+            if (st) {
+                if (!isElementExist(st, tpl[2].addr))
+                    st.elements.push({el: tpl[2], tpl: tpl});
+            } else {
+                subtrees[tpl[0].addr] = {el: tpl[0], elements: [{el: tpl[2], tpl: tpl}], triples: []};
+            }
+            
+            idx++;
+        }
+        
+        // we have elements, so we need to find all triples, where all element exist in subtree contour
+        idx = 0;
+        while (idx < this.triples.length) {
+            var tpl = this.triples[idx];
+            var used = false;
+            for (addr in subtrees) {
+                var st = subtrees[addr];
+                
+                if (!isElementExist(st, tpl[0].addr) || !isElementExist(st, tpl[1].addr) || !isElementExist(st, tpl[2].addr)) {
+                    continue;
+                }
+                
+                st.triples = st.triples.concat(this.triples.splice(idx, 1));
+                used = true;
+                break;
+            }
+            
+            if (!used)
+                idx++;
+        }
+        
+        // if subtree has no any elements, then merge it back to main tree
+        var delKeys = [];
+        for (addr in subtrees) {
+            if (subtrees[addr].elements.length == 0) {
+                delKeys.push(addr);
+            }
+        }
+        
+        for (idx in delKeys) {
+            delete subtrees[delKeys[idx]];
+        }
+        
+        var self = this;
+        
+        // build tree objects
+        for (addr in subtrees) {
+            var subtree = subtrees[addr];
+            var tree = new SCs.SCnTree();
+            tree.init(subtree.el.addr);
+
+            // determine keywords by input/output arcs number
+            var keywords = {};
+            function addArc(el, value) {
+                    
+                var n = value;
+                if (el.type & (sc_type_arc_mask | sc_type_link)) 
+                    n += -2; // minimize priority of arcs
+                    
+                if (keywords[el.addr]) 
+                    keywords[el.addr].priority += n;
+                else 
+                    keywords[el.addr] = {el: el, priority: n};
+            }
+            
+            //---
+            for (idx in subtree.triples) {
+                var tpl = subtree.triples[idx];
+                var n = 1;
+                
+                 if (tpl[2].type & sc_type_arc_mask)
+                    n = -1; // minimize priority of nodes, that has output arcs to other arcs
+                if (tpl[0].addr != addr)
+                    addArc(tpl[0], n);
+                if (tpl[2].addr != addr)
+                    addArc(tpl[2], n);
+            }
+            var keywordsList = [];
+            var maxValue = -1;
+            for (a in keywords) {
+                var el = keywords[a];
+                if (el.priority > maxValue) {
+                    keywordsList = [el.el];
+                    maxValue = el.priority;
+                }
+            }
+
+            tree.build(keywordsList, subtree.triples);
+            this.subtrees[addr] = tree;
+            this.addrs = this.addrs.concat(tree.addrs);
+        }
+    },
+    
     /*! Builds tree based on array of triples
      * @param {Array} keyords Array of keywords
      * @param {Array} triples Array of triples
      */
     build: function(keywords, triples) {
         var queue = [];
-        this.triples = triples;
+        this.triples = this.triples.concat(triples);
         // first of all we need to create root nodes for all keywords
         for (i in keywords) {
             var node = new SCs.SCnTreeNode();
@@ -39,7 +160,8 @@ SCs.SCnTree.prototype = {
             queue.push(node);
         }
         
-        this.buildLevels(queue, triples);
+        this.determineSubTrees();
+        this.buildLevels(queue, this.triples);
     },
     
     buildLevels: function(queue, triples) {

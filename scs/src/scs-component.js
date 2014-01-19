@@ -68,7 +68,7 @@ SCsViewer.prototype = {
     
     updateTranslation: function(namesMap) {
         // apply translation
-        $(this.container + ' [sc_addr]').each(function(index, element) {
+        $(this.container + ' [sc_addr]:not(.scs-scn-contour, .scs-scn-content)').each(function(index, element) {
             var addr = $(element).attr('sc_addr');
             if(namesMap[addr]) {
                 $(element).text(namesMap[addr]);
