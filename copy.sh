@@ -6,6 +6,7 @@ echo
 echo "Select component to copy"
 echo "1) scg"
 echo "2) scs"
+echo "3) html"
 echo "---"
 
 read component
@@ -17,6 +18,7 @@ source_path=''
 case $component in
         '1') source_path='scg/';;
         '2') source_path='scs/';;
+	'3') source_path='html/';;
         *)   echo "You have selected unknown component to copy";;
 esac
 

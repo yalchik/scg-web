@@ -45,9 +45,10 @@ scgViewerWindow.prototype = {
      * Set new data in viewer
      * @param {Object} data
      */
-    receiveData : function(data){
+    receiveData : function(data, callback){
         
         this._buildGraph(data);
+        callback();
     },
 
     /**

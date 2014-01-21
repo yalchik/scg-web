@@ -44,11 +44,6 @@ SCsViewer.prototype = {
         this.sandbox.eventGetObjectsToTranslate = $.proxy(this.getObjectsToTranslate, this);
         this.sandbox.eventApplyTranslation = $.proxy(this.updateTranslation, this);
         
-        var self = this;
-        $(this.container).delegate('[sc_addr]', 'click', function(e) {
-            self.sandbox.doDefaultCommand([$(e.currentTarget).attr('sc_addr')]);
-        });
-        
         this.viewer = new SCs.Viewer();
         this.viewer.init(sandbox.container, $.proxy(sandbox.getKeynode, sandbox));
     },
@@ -58,17 +53,21 @@ SCsViewer.prototype = {
         this.data = data;
         this.viewer.appendData(data);
         
-        this.sandbox.createViewersForScLinks(this.viewer.getLinks(), 
-                            function() { // success
-
-                            }, function() { // error
-
+        var dfd = new jQuery.Deferred();
+        
+        $.when(this.sandbox.createViewersForScLinks(this.viewer.getLinks())).then(
+                            function() {
+                                dfd.resolve();
+                            }, 
+                            function() {
+                                dfd.reject();
                             });
+        return dfd.promise();
     },
     
     updateTranslation: function(namesMap) {
         // apply translation
-        $(this.container + ' [sc_addr]:not(.scs-scn-contour, .scs-scn-content)').each(function(index, element) {
+        $(this.container + ' [sc_addr]:not(.scs-scn-content > [sc_addr])').each(function(index, element) {
             var addr = $(element).attr('sc_addr');
             if(namesMap[addr]) {
                 $(element).text(namesMap[addr]);
