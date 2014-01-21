@@ -16,7 +16,6 @@ HtmlViewer.prototype = {
     container: null,
     data: null,
     sandbox: null,
-    sc_links: {},
     addrs: [],
     
     init: function(sandbox) {
@@ -37,6 +36,7 @@ HtmlViewer.prototype = {
 
         // collect all sc-element and process them
         var idtfList = [];
+        var sc_links = {};
         var sc_elements = $(this.container + ' sc_element');
         for (var i = 0; i < sc_elements.length; ++i) {
             var id = $(sc_elements[i]).attr('sys_idtf');
@@ -46,9 +46,9 @@ HtmlViewer.prototype = {
 
         // collect all sc-links
         var scLinksList = [];
-        var sc_links = $(this.container + ' sc_link');
-        for (var i = 0; i < sc_links.length; ++i) {
-            var id = $(sc_links[i]).attr('sys_idtf');
+        var sc_links_el = $(this.container + ' sc_link');
+        for (var i = 0; i < sc_links_el.length; ++i) {
+            var id = $(sc_links_el[i]).attr('sys_idtf');
             if (id)
                 scLinksList.push(id);
         }
@@ -68,22 +68,22 @@ HtmlViewer.prototype = {
                 }
             }
 
-            var sc_links = $(self.container + ' sc_link');
-            for (var i = 0; i < sc_links.length; ++i) {
-                var addr = addrs[ $(sc_links[i]).attr('sys_idtf')];
+            var sc_links_el = $(self.container + ' sc_link');
+            for (var i = 0; i < sc_links_el.length; ++i) {
+                var addr = addrs[ $(sc_links_el[i]).attr('sys_idtf')];
                 if (addr) {
                     var containerId = self.sandbox.container + '_' + i;
-                    self.sc_links[containerId] = addr;
-                    $(sc_links[i]).html('<div class="sc-content" sc_addr="' + addr + '" id="' + containerId + '"></div>');
+                    sc_links[containerId] = addr;
+                    $(sc_links_el[i]).html('<div class="sc-content" sc_addr="' + addr + '" id="' + containerId + '"></div>');
                 }
             }
             
             
-            /*$.when(self.sandbox.createViewersForScLinks(self.sc_links)).done(
+            $.when(self.sandbox.createViewersForScLinks(sc_links)).done(
                 function() {
                     dfd.resolve();
-                });*/
-            dfd.resolve();
+                });
+            //dfd.resolve();
         });
 
         return dfd.promise();
