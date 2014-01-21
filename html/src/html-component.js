@@ -16,6 +16,7 @@ HtmlViewer.prototype = {
     container: null,
     data: null,
     sandbox: null,
+    sc_links: {},
     addrs: [],
     
     init: function(sandbox) {
@@ -39,14 +40,22 @@ HtmlViewer.prototype = {
         var sc_elements = $(this.container + ' sc_element');
         for (var i = 0; i < sc_elements.length; ++i) {
             var id = $(sc_elements[i]).attr('sys_idtf');
-            
             if (id)
                 idtfList.push(id);
         }
 
+        // collect all sc-links
+        var scLinksList = [];
+        var sc_links = $(this.container + ' sc_link');
+        for (var i = 0; i < sc_links.length; ++i) {
+            var id = $(sc_links[i]).attr('sys_idtf');
+            if (id)
+                scLinksList.push(id);
+        }
+
         // resolve addrs
         var self = this;
-        SCWeb.core.Server.resolveScAddr(idtfList, function(addrs) {
+        SCWeb.core.Server.resolveScAddr(idtfList.concat(scLinksList), function(addrs) {
             for (idtf in addrs) {
                 self.addrs.push(addrs[idtf]);
             }
@@ -56,10 +65,24 @@ HtmlViewer.prototype = {
                 var addr = addrs[ $(sc_elements[i]).attr('sys_idtf')];
                 if (addr) {
                     $(sc_elements[i]).html('<a href="#" class="sc-element" sc_addr="' + addr + '">' + $(sc_elements[i]).html() + "</a>");
-                    
                 }
             }
 
+            var sc_links = $(self.container + ' sc_link');
+            for (var i = 0; i < sc_links.length; ++i) {
+                var addr = addrs[ $(sc_links[i]).attr('sys_idtf')];
+                if (addr) {
+                    var containerId = self.sandbox.container + '_' + i;
+                    self.sc_links[containerId] = addr;
+                    $(sc_links[i]).html('<div class="sc-content" sc_addr="' + addr + '" id="' + containerId + '"></div>');
+                }
+            }
+            
+            
+            /*$.when(self.sandbox.createViewersForScLinks(self.sc_links)).done(
+                function() {
+                    dfd.resolve();
+                });*/
             dfd.resolve();
         });
 
@@ -69,7 +92,7 @@ HtmlViewer.prototype = {
     // ---- window interface -----
     updateTranslation: function(namesMap) {
         // apply translation
-        $(this.container + ' [sc_addr]').each(function(index, element) {
+        $(this.container + ' [sc_addr]:not(.sc-content)').each(function(index, element) {
             var addr = $(element).attr('sc_addr');
             if(namesMap[addr] && $(element).is(':empty')) {
                 $(element).text(namesMap[addr]);

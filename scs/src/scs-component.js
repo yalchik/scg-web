@@ -67,12 +67,12 @@ SCsViewer.prototype = {
     
     updateTranslation: function(namesMap) {
         // apply translation
-        $(this.container + ' [sc_addr]:not(.scs-scn-content > [sc_addr])').each(function(index, element) {
+        $(SCWeb.ui.Core.selectorWindowScAddr(this.container)).each(function(index, element) {
             var addr = $(element).attr('sc_addr');
             if(namesMap[addr]) {
                 $(element).text(namesMap[addr]);
             } else {
-                if (!$(element).hasClass('scs-scn-content'))
+                if (!$(element).hasClass('sc-content'))
                     $(element).html('<b>ⵔ</b>');
             }
         });
