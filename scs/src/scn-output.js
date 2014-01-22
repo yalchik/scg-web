@@ -89,8 +89,15 @@ SCs.SCnOutput.prototype = {
             }
 
             if (!treeNode.isSet) {
-                output += this.treeNodeElementHtml(treeNode);
-                output += childsToHtml();
+                var contourTree = this.tree.subtrees[treeNode.element.addr];
+                if (contourTree) {
+                    output += '<div class="scs-scn-element scs-scn-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
+                            + this.subtreeToHtml(contourTree)
+                            + '</div>';
+                } else {
+                    output += this.treeNodeElementHtml(treeNode);
+                    output += childsToHtml();
+                }
             } else {
                 output += '{';
                 for (idx in treeNode.childs) {

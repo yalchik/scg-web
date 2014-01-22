@@ -26,7 +26,7 @@ HtmlViewer.prototype = {
         this.sandbox.eventApplyTranslation = $.proxy(this.updateTranslation, this);
         this.sandbox.eventDataAppend = $.proxy(this.receiveData, this);
         
-        var self = this;
+        this.sandbox.updateContent();
     },
 
     receiveData: function(data) {

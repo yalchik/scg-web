@@ -46,6 +46,8 @@ SCsViewer.prototype = {
         
         this.viewer = new SCs.Viewer();
         this.viewer.init(sandbox.container, $.proxy(sandbox.getKeynode, sandbox));
+        
+        this.sandbox.updateContent();
     },
     
     // ---- window interface -----

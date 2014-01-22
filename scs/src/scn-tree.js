@@ -46,7 +46,15 @@ SCs.SCnTree.prototype = {
                 continue;
             }
             
+            // check if there are any input/output arcs
             tpl.ignore = true;
+            for (k in this.triples) {
+                if (this.triples[k][0].addr == tpl[1].addr || this.triples[k][2].addr == tpl[1].addr) {
+                    tpl.ignore = false;
+                    break;
+                }
+            }
+
             var st = subtrees[tpl[0].addr];
             if (st) {
                 if (!isElementExist(st, tpl[2].addr))
