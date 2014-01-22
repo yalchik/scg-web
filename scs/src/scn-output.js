@@ -92,8 +92,7 @@ SCs.SCnOutput.prototype = {
                 var contourTree = this.tree.subtrees[treeNode.element.addr];
                 if (contourTree) {
                     output += '<div class="scs-scn-element scs-scn-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
-                            + this.subtreeToHtml(contourTree)
-                            + '</div>';
+                            + this.subtreeToHtml(contourTree);
                 } else {
                     output += this.treeNodeElementHtml(treeNode);
                     output += childsToHtml();
