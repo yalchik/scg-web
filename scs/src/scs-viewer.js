@@ -9,7 +9,7 @@ SCs.Viewer.prototype = {
         this.getKeynode = keynode_func;
 
         this.tree = new SCs.SCnTree();
-        this.tree.init();
+        this.tree.init(null, keynode_func);
         
         this.output = new SCs.SCnOutput();
         this.output.init(this.tree, container, this.getKeynode);

@@ -50,7 +50,7 @@ SCs.SCnOutput.prototype = {
             var contourTree = this.tree.subtrees[treeNode.element.addr];
             if (contourTree) {
                 output += '<div class="scs-scn-field-marker scs-scn-element">=</div>'
-                        + '<div class="scs-scn-element scs-scn-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
+                        + '<div class="scs-scn-element sc-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
                         + this.subtreeToHtml(contourTree)
                         + '</div>';
             }
@@ -91,13 +91,14 @@ SCs.SCnOutput.prototype = {
             if (!treeNode.isSet) {
                 var contourTree = this.tree.subtrees[treeNode.element.addr];
                 if (contourTree) {
-                    output += '<div class="scs-scn-element scs-scn-contour scs-scn-field">' //sc_addr="' + treeNode.element.addr + '">'
+                    output += '<div class="scs-scn-element sc-contour scs-scn-field" sc_addr="' + treeNode.element.addr + '">'
                             + this.subtreeToHtml(contourTree)
                             + '</div>';
                 } else {
                     output += this.treeNodeElementHtml(treeNode);
-                    output += childsToHtml();
+                    
                 }
+                output += childsToHtml();
             } else {
                 output += '{';
                 for (idx in treeNode.childs) {

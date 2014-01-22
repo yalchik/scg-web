@@ -5,7 +5,7 @@ SCsComponent = {
         return new SCsViewer(sandbox);
     },
     getRequestKeynodes: function() {
-        var keynodes = ['nrel_section_base_order'];
+        var keynodes = ['nrel_section_base_order', 'rrel_key_sc_element'];
         return keynodes.concat(SCs.SCnSortOrder);
     }
 };
@@ -74,7 +74,7 @@ SCsViewer.prototype = {
             if(namesMap[addr]) {
                 $(element).text(namesMap[addr]);
             } else {
-                if (!$(element).hasClass('sc-content'))
+                if (!$(element).hasClass('sc-content') && !$(element).hasClass('sc-contour'))
                     $(element).html('<b>ⵔ</b>');
             }
         });

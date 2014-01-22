@@ -126,8 +126,13 @@ SCs.SCnTree.prototype = {
                 var tpl = subtree.triples[idx];
                 var n = 1;
                 
-                 if (tpl[2].type & sc_type_arc_mask)
-                    n = -1; // minimize priority of nodes, that has output arcs to other arcs
+                if (tpl[2].type & sc_type_arc_mask | tpl[0].type & sc_type_link)
+                    n -= 1; // minimize priority of nodes, that has output/input arcs to other arcs or links
+                if (tpl[2].type & sc_type_link || tpl[0].type & sc_type_link)
+                    n -= 1; // minimize priority of nodes, that has output/input arcs to links
+                if (tpl[1].type & (sc_type_arc_common | sc_type_edge_common))
+                    n += 1;
+
                 if (tpl[0].addr != addr)
                     addArc(tpl[0], n);
                 if (tpl[2].addr != addr)
