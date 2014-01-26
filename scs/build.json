@@ -5,7 +5,8 @@
 	"src/scs-viewer.js",
 	"src/scs-output.js",
 	"src/scn-output.js",
-        "src/scn-tree.js"
+    "src/scn-tree.js",
+    "src/scn-highlighter.js"    
         ],
 	
 	"component": "src/scs-component.js",

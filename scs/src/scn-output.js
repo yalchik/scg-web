@@ -9,6 +9,7 @@ SCs.SCnOutput.prototype = {
         this.sc_links = [];
         this.linkCounter = 0;
         this.getKeynode = keynode_func;
+        new SCs.Highlighter(container).init();
     },
 
     /*! Returns string that contains html representation of scn-text
@@ -44,7 +45,7 @@ SCs.SCnOutput.prototype = {
         }
 
         if (treeNode.type == SCs.SCnTreeNodeType.Keyword) {
-            output = '<div class="scs-scn-field"><div class="scs-scn-keyword"><a href="#" class="scs-scn-element" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a></div>';
+            output = '<div class="scs-scn-field"><div class="scs-scn-keyword"><a href="#" class="scs-scn-element scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a></div>';
             output += childsToHtml();
 
             var contourTree = this.tree.subtrees[treeNode.element.addr];
@@ -76,7 +77,7 @@ SCs.SCnOutput.prototype = {
                     if (attr.a.type & sc_type_var) {
                         sep = '∷';
                     }
-                    output += '<a href="#" class="scs-scn-element" sc_addr="' + attr.n.addr + '">' + attr.n.addr + '</a>' + '<span>' + sep + '</span>';
+                    output += '<a href="#" class="scs-scn-element scs-scn-highlighted" sc_addr="' + attr.n.addr + '">' + attr.n.addr + '</a>' + '<span>' + sep + '</span>';
                 }
                 output += '</div>';
             }
@@ -91,7 +92,7 @@ SCs.SCnOutput.prototype = {
             if (!treeNode.isSet) {
                 var contourTree = this.tree.subtrees[treeNode.element.addr];
                 if (contourTree) {
-                    output += '<div class="scs-scn-element sc-contour scs-scn-field" sc_addr="' + treeNode.element.addr + '">'
+                    output += '<div class="scs-scn-element sc-contour scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">'
                             + this.subtreeToHtml(contourTree);
                 } else {
                     output += this.treeNodeElementHtml(treeNode);
@@ -121,10 +122,10 @@ SCs.SCnOutput.prototype = {
             var containerId = this.container + '_' + this.linkCounter;
             this.linkCounter++;
             this.sc_links[containerId] = treeNode.element.addr;
-            return '<div class="scs-scn-element sc-content scs-scn-field" id="' + containerId + '" sc_addr="' + treeNode.element.addr + '">' + '</div>';
+            return '<div class="scs-scn-element sc-content scs-scn-field scs-scn-highlighted" id="' + containerId + '" sc_addr="' + treeNode.element.addr + '">' + '</div>';
         }
         
-        return '<a href="#" class="scs-scn-element scs-scn-field" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a>';
+        return '<a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a>';
     },
 
     subtreeToHtml: function(subtree) {
