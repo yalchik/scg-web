@@ -244,7 +244,7 @@ SCg.Editor.prototype = {
      */
     onSelectionChanged: function() {
         
-        if (this.scene.selected_objects.length == 1) {
+        if (this.scene.selected_objects.length == 1 && !(this.scene.selected_objects[0] instanceof SCg.ModelContour)) {
             this._enableTool('#scg-tool-change-idtf');
             this._enableTool('#scg-tool-change-type');
         } else {
