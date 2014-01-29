@@ -342,7 +342,7 @@ SCg.Scene.prototype = {
         if (this.selected_objects.length == 1) {
             var obj = this.selected_objects[0];
             
-            if (obj instanceof SCg.ModelEdge || obj instanceof SCg.ModelBus) { /* @todo add contour and bus */
+            if (obj instanceof SCg.ModelEdge || obj instanceof SCg.ModelBus || obj instanceof SCg.ModelContour) { /* @todo add contour and bus */
                 for (idx in obj.points) {
                     this.line_points.push({pos: obj.points[idx], idx: idx});
                 }
@@ -358,19 +358,18 @@ SCg.Scene.prototype = {
         
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
+        var offset = new SCg.Vector3(x - this.mouse_pos.x, y - this.mouse_pos.y, 0);
+
         this.mouse_pos.x = x;
         this.mouse_pos.y = y;
         
         if ((this.edit_mode == SCgEditMode.SCgModeSelect) && this.focused_object) {
-           if (this.focused_object instanceof SCg.ModelBus) {            
-                this.focused_object.changePosition(new SCg.Vector3(x, y, 0));
-            } else  if (this.focused_object.sc_type & sc_type_node) {
-                this.focused_object.setPosition(new SCg.Vector3(x, y, 0));
-            } else if (this.focused_object.sc_type & sc_type_contour) {
-                this.focused_object.setNewPoint(new SCg.Vector3(x, y, 0));
-            }            
+            if (this.focused_object.sc_type & sc_type_node) {
+                this.focused_object.setPosition(this.focused_object.position.clone().add(offset));
+            }
             
             this.updateObjectsVisual();
+            this.render.updateLinePoints();
         }
         
         if (this.edit_mode == SCgEditMode.SCgModeEdge || this.edit_mode == SCgEditMode.SCgModeBus 
@@ -604,8 +603,8 @@ SCg.Scene.prototype = {
         }
         
         var edge = this.selected_objects[0];
-        if (!(edge instanceof SCg.ModelEdge) && !(edge instanceof SCg.ModelBus)) {
-            SCgDebug.error("Selected object isn't an edge");
+        if (!(edge instanceof SCg.ModelEdge) && !(edge instanceof SCg.ModelBus) && !(edge instanceof SCg.ModelContour)) {
+            SCgDebug.error("Unknown type of selected object");
             return;
         }
         

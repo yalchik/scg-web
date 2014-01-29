@@ -206,8 +206,8 @@ SCg.Render.prototype = {
             .attr('class', 'SCgContour')
             .attr('points', function(d) {
                 var verticiesString = "";
-                for (var i = 0; i < d.verticies.length; i++) {
-                    var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                for (var i = 0; i < d.points.length; i++) {
+                    var vertex = d.points[i].x + ', ' + d.points[i].y + ' ';
                     verticiesString = verticiesString.concat(vertex);
                 }
                 return verticiesString;
@@ -310,8 +310,8 @@ SCg.Render.prototype = {
 
                 d3_contour.attr('points', function(d) {
                     var verticiesString = "";
-                    for (var i = 0; i < d.verticies.length; i++) {
-                        var vertex = d.verticies[i].x + ', ' + d.verticies[i].y + ' ';
+                    for (var i = 0; i < d.points.length; i++) {
+                        var vertex = d.points[i].x + ', ' + d.points[i].y + ' ';
                         verticiesString = verticiesString.concat(vertex);
                     }
                     return verticiesString;
@@ -320,7 +320,7 @@ SCg.Render.prototype = {
                 d.need_update = false;
                 d.need_observer_sync = false;
 
-                return self.d3_contour_line(d.verticies) + 'Z';
+                return self.d3_contour_line(d.points) + 'Z';
             });
         });
 

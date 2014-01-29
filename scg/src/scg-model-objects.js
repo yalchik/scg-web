@@ -518,64 +518,45 @@ SCg.ModelContour = function(options) {
     SCg.ModelObject.call(this, options);
 
     this.childs = [];
-    this.verticies = options.verticies ? options.verticies : [];
+    this.points = options.verticies ? options.verticies : [];
     this.sc_type = options.sc_type ? options.sc_type : sc_type_node_struct | sc_type_node;
     this.previousPoint = null;
 
     var cx = 0;
     var cy = 0;
-    for (var i = 0; i < this.verticies.length; i++) {
-        cx += this.verticies[i].x;
-        cy += this.verticies[i].y;
+    for (var i = 0; i < this.points.length; i++) {
+        cx += this.points[i].x;
+        cy += this.points[i].y;
     }
 
-    cx /= this.verticies.length;
-    cy /= this.verticies.length;
-    this.setPosition(new SCg.Vector3(cx, cy, 0));
-    this.previousPoint = this.position;
-    this.newPoint = this.position;
+    cx /= this.points.length;
+    cy /= this.points.length;
+    this.position.x = cx;
+    this.position.y = cy;
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
 
-SCg.ModelContour.prototype.setNewPoint = function(pos) {
 
-    this.newPoint = pos;
-    this.need_observer_sync = true;
+SCg.ModelContour.prototype.setPosition = function(pos) {
 
-    this.requestUpdate();
-    this.notifyEdgesUpdate();
+    var dp = pos.clone().sub(this.position);
+    
+    for (var i = 0; i < this.childs.length; i++) {
+        var newPos = this.childs[i].position.clone().add(dp);
+        this.childs[i].setPosition(newPos);
+    }
+
+    for (var i = 0; i < this.points.length; i++) {
+        this.points[i].x += dp.x;
+        this.points[i].y += dp.y;
+    }
+    
+    SCg.ModelObject.prototype.setPosition.call(this, pos);
 };
 
 SCg.ModelContour.prototype.update = function() {
-    if (this.previousPoint) {
-        //var dx = this.position.x - this.previousPoint.x;
-        //var dy = this.position.y - this.previousPoint.y;
-        var dx = this.newPoint.x - this.previousPoint.x;
-        var dy = this.newPoint.y - this.previousPoint.y;
-
-
-        for (var i = 0; i < this.childs.length; i++) {
-            var childNewPositionX = this.childs[i].position.x + dx;
-            var childNewPositionY = this.childs[i].position.y + dy;
-            var childNewPositionVector = new SCg.Vector3(childNewPositionX, childNewPositionY, 0)
-            this.childs[i].setPosition(childNewPositionVector);
-        }
-
-        for (var i = 0; i < this.verticies.length; i++) {
-            this.verticies[i].x += dx;
-            this.verticies[i].y += dy;
-        }
-
-        var contourNewPositionX = this.position.x + dx;
-        var contourNewPositionY = this.position.y + dy;
-        var contourNewPositionVector = new SCg.Vector3(contourNewPositionX, contourNewPositionY, 0)
-        this.setPosition(contourNewPositionVector);
-
-        //this.previousPoint = this.position;
-        this.previousPoint = this.newPoint;
-    }
-
+    SCg.ModelObject.prototype.update.call(this);
 };
 
 /**
@@ -598,7 +579,7 @@ SCg.ModelContour.prototype.removeChild = function(child) {
 };
 
 SCg.ModelContour.prototype.isNodeInPolygon = function (node) {
-    return SCg.Algorithms.isPointInPolygon(node.position, this.verticies);
+    return SCg.Algorithms.isPointInPolygon(node.position, this.points);
 };
 
 /**
@@ -615,7 +596,7 @@ SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
 };
 
 SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
-    var points = SCg.Algorithms.polyclip(this.verticies, from, this.position);
+    var points = SCg.Algorithms.polyclip(this.points, from, this.position);
     var nearestIntersectionPoint = new SCg.Vector3(points[0].x, points[0].y, 0);
     for (var i = 1; i < points.length; i++) {
         var nextPoint = new SCg.Vector3(points[i].x, points[i].y, 0);
