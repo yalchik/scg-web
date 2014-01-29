@@ -579,7 +579,7 @@ SCg.Scene.prototype = {
             SCgDebug.error('Work with drag point in incorrect edit mode');
             return;
         }
-        
+       
         this.drag_line_points.splice(idx, this.drag_line_points.length - idx);
         
         if (this.drag_line_points.length >= 2)
@@ -644,7 +644,7 @@ SCg.Scene.prototype = {
         this.render.updateDragLine();
      },
 
-    createCurrentContour: function() {
+    finishContourCreation: function() {
         if (this.drag_line_points.length < 3) {
             SCgDebug.error('Set at least 3 points for contour');
             return;

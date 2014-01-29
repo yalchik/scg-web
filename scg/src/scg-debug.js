@@ -5,7 +5,7 @@ var SCgDebug = {
     error: function(message) {
         if (!this.enabled) return; // do nothing
         
-        alert(message);
+        throw message;
     }
     
 }

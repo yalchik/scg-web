@@ -519,7 +519,7 @@ SCg.ModelContour = function(options) {
 
     this.childs = [];
     this.verticies = options.verticies ? options.verticies : [];
-    this.sc_type = options.sc_type ? options.sc_type : sc_type_contour;
+    this.sc_type = options.sc_type ? options.sc_type : sc_type_node_struct | sc_type_node;
     this.previousPoint = null;
 
     var cx = 0;
