@@ -24,6 +24,7 @@ SCg.Tree.prototype = {
         }
         
         // collect contour elements
+        var parentsDict = {};
         for (t in this.triples) {
             var tpl = this.triples[t];
 
@@ -33,6 +34,7 @@ SCg.Tree.prototype = {
                 if ((c == tpl[0].addr) && (tpl[1].type & sc_type_arc_pos_const_perm)) {
                     contours[c].childs.push(tpl[2]);
                     tpl.ignore = true;
+                    parentsDict[tpl[2].addr] = c;
                     break;
                 }
             }

@@ -131,10 +131,10 @@ SCs.SCnOutput.prototype = {
             var einfo = this.tree.getEdgeInfo(treeNode.element.addr);
             if (einfo) {
                 var marker = SCs.SCnConnectors[treeNode.element.type];
-                return '<a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.source.addr + '">' + einfo.source.addr + '</a>\
-                        <div class="scs-scn-field-marker scs-scn-element"><a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">'
-                        + marker + '</a></div>\
-                        <a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.target.addr + '">' + einfo.target.addr + '</a>';
+                return '(<a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.source.addr + '">' + einfo.source.addr + '</a>\
+                        <a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted scs-scn-connector" sc_addr="' + treeNode.element.addr + '">'
+                        + marker.f + '</a>\
+                        <a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.target.addr + '">' + einfo.target.addr + '</a>)';
             }
         }
         

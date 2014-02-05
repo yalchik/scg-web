@@ -187,6 +187,11 @@ SCs.SCnTree.prototype = {
                 var tpl = triples[idx];
                 var found = false;
                 var backward = false;
+
+                // collect all sc-addrs
+                this._appendAddr(tpl[0]);
+                this._appendAddr(tpl[1]);
+                this._appendAddr(tpl[2]);
                 
                 if (!tpl.output && !tpl.ignore) {
                     // arc attributes
@@ -197,7 +202,7 @@ SCs.SCnTree.prototype = {
                             node.attrs.push({n: tpl[0], a: tpl[1], triple: tpl});
                             tpl.output = true;
                             
-                            this._appendAddr(tpl[0]);
+                            //this._appendAddr(tpl[0]);
                         }
                     }
                     
@@ -231,10 +236,6 @@ SCs.SCnTree.prototype = {
                         tpl.output = true;
                         
                         queue.push(nd);
-                        
-                        this._appendAddr(tpl[0]);
-                        this._appendAddr(tpl[1]);
-                        this._appendAddr(tpl[2]);
                     }
                 }
                 

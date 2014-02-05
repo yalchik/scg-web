@@ -74,7 +74,7 @@ SCsViewer.prototype = {
             if(namesMap[addr]) {
                 $(element).text(namesMap[addr]);
             } else {
-                if (!$(element).hasClass('sc-content') && !$(element).hasClass('sc-contour'))
+                if (!$(element).hasClass('sc-content') && !$(element).hasClass('sc-contour') && !$(element).hasClass('scs-scn-connector'))
                     $(element).html('<b>ⵔ</b>');
             }
         });
