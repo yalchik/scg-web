@@ -3,12 +3,13 @@ SCs.SCnOutput = function() {
 
 SCs.SCnOutput.prototype = {
     
-    init: function(tree, container, keynode_func) {
+    init: function(tree, container, keynode_func, gen_window_func) {
         this.tree = tree;
         this.container = container;
         this.sc_links = [];
         this.linkCounter = 0;
         this.getKeynode = keynode_func;
+        this.generateWindow = gen_window_func;
         new SCs.Highlighter(container).init();
     },
 
@@ -45,7 +46,7 @@ SCs.SCnOutput.prototype = {
         }
 
         if (treeNode.type == SCs.SCnTreeNodeType.Keyword) {
-            output = '<div class="scs-scn-field"><div class="scs-scn-keyword"><a href="#" class="scs-scn-element scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a></div>';
+            output = '<div class="scs-scn-field"><div class="scs-scn-keyword">' + this.treeNodeElementHtml(treeNode, true) + '</div>';
             output += childsToHtml();
 
             var contourTree = this.tree.subtrees[treeNode.element.addr];
@@ -116,13 +117,25 @@ SCs.SCnOutput.prototype = {
         return output;
     },
 
-    treeNodeElementHtml: function(treeNode) {
+    treeNodeElementHtml: function(treeNode, isKeyword) {
 
-        if (treeNode.element.type & sc_type_link) {
+        if (!isKeyword && treeNode.element.type & sc_type_link) {
             var containerId = this.container + '_' + this.linkCounter;
             this.linkCounter++;
             this.sc_links[containerId] = treeNode.element.addr;
-            return '<div class="scs-scn-element sc-content scs-scn-field scs-scn-highlighted" id="' + containerId + '" sc_addr="' + treeNode.element.addr + '">' + '</div>';
+            return this.generateWindow(containerId, "scs-scn-element scs-scn-field scs-scn-highlighted", treeNode.element.addr);
+            //return '<div class="scs-scn-element sc-content scs-scn-field scs-scn-highlighted" id="' + containerId + '" sc_addr="' + treeNode.element.addr + '">' + '</div>';
+        }
+
+        if (treeNode.element.type & sc_type_arc_mask) {
+            var einfo = this.tree.getEdgeInfo(treeNode.element.addr);
+            if (einfo) {
+                var marker = SCs.SCnConnectors[treeNode.element.type];
+                return '<a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.source.addr + '">' + einfo.source.addr + '</a>\
+                        <div class="scs-scn-field-marker scs-scn-element"><a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">'
+                        + marker + '</a></div>\
+                        <a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + einfo.target.addr + '">' + einfo.target.addr + '</a>';
+            }
         }
         
         return '<a href="#" class="scs-scn-element scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">' + treeNode.element.addr + '</a>';
@@ -132,6 +145,7 @@ SCs.SCnOutput.prototype = {
         var scnOutput = new SCs.SCnOutput();
         scnOutput.init(subtree, this.container, this.getKeynode);
         scnOutput.linkCounter = this.linkCounter;
+        scnOutput.generateWindow = this.generateWindow;
 
         var res = scnOutput.toHtml();
         this.linkCounter = scnOutput.linkCounter;

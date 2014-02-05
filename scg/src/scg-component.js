@@ -6,7 +6,6 @@ SCgComponent = {
     }
 };
 
-
 /**
  * scgViewerWindow
  * @param config
@@ -31,6 +30,9 @@ scgViewerWindow.prototype = {
          */
         this.domContainer = sandbox.container;
         this.sandbox = sandbox;
+        
+        this.tree = new SCg.Tree();
+        this.tree.init();
 
         this.editor = new SCg.Editor();
         this.editor.init({containerId: sandbox.container});
@@ -49,11 +51,51 @@ scgViewerWindow.prototype = {
      */
     receiveData : function(data) {
         var dfd = new jQuery.Deferred();
-
-        this._buildGraph(data);
+    
+        this.collectTriples(data);
+        this.tree.build(this.triples);
+        //this._buildGraph(data);
 
         dfd.resolve();
         return dfd.promise();
+    },
+
+    /** Collect triples
+     */
+    collectTriples: function(data) {
+
+        this.triples = [];
+        
+        var elements = {};
+        var edges = [];
+        for (var i = 0; i < data.length; i++) {
+            var el = data[i];
+
+            elements[el.id] = el;
+            if (el.el_type & sc_type_arc_mask) {
+                edges.push(el);
+            }
+        }
+
+        var founded = true;
+        while (edges.length > 0 && founded) {
+            founded = false;
+            for (idx in edges) {
+                var obj = edges[idx];
+                var beginEl = elements[obj.begin];
+                var endEl = elements[obj.end];
+
+                // try to get begin and end object for arc
+                if (beginEl && endEl) {
+                    founded = true;
+                    edges.splice(idx, 1);
+                    
+                    this.triples.push([beginEl, {type: obj.el_type, addr: obj.id}, endEl]);
+                } 
+            }
+        }
+
+        alert(this.triples.length);
     },
 
     /**

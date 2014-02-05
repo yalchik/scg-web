@@ -4,15 +4,16 @@ SCs.Viewer = function() {
 
 SCs.Viewer.prototype = {
 
-    init: function(container, keynode_func) {
-        this.containerId = '#' + container;
+    init: function(sandbox, keynode_func) {
+        this.sandbox = sandbox;
+        this.containerId = '#' + sandbox.container;
         this.getKeynode = keynode_func;
 
         this.tree = new SCs.SCnTree();
         this.tree.init(null, keynode_func);
         
         this.output = new SCs.SCnOutput();
-        this.output.init(this.tree, container, this.getKeynode);
+        this.output.init(this.tree, sandbox.container, this.getKeynode, this.sandbox.generateWindowContainer);
     },
     
     /*! Append new scs-data to visualize

@@ -1,6 +1,6 @@
 var SCgDebug = {
     
-    enabled: false,
+    enabled: true,
     
     error: function(message) {
         if (!this.enabled) return; // do nothing

@@ -25,7 +25,6 @@ SCs.SCnTree.prototype = {
     /** Determine all subtrees in triples
      */
     determineSubTrees: function() {
-        
         // collect subtree elements
         var subtrees = {};
         var idx = 0;
@@ -279,6 +278,22 @@ SCs.SCnTree.prototype = {
             }
             node.childs.splice(0, node.childs.length);
         }
+    },
+    
+    /*! Returns information about specified edge.
+     * Returned object has such properties:
+     * - source - source element
+     * - target - target element
+     * - edge - edge element
+     * If there are no info about specified edge, then returns null
+     */
+    getEdgeInfo: function(addr) {
+        for (i in this.triples) {
+            var tpl = this.triples[i];
+            if (tpl[1].addr == addr)
+                return {edge: tpl[1], source: tpl[0], target: tpl[2]};
+        }
+        return null;
     }
     
 };

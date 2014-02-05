@@ -15,7 +15,7 @@ def create_file(build_file, build_component):
     f.close()
     
     target_file_path = os.path.join(path, config['target'])
-    if build_component == 1:
+    if build_component == 1 and config.has_key('component'):
         config['sources'].append(config['component'])
 
     lines = []

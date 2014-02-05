@@ -49,7 +49,7 @@ SCg.Render.prototype = {
                 .attr('d', 'M0,0L0,0');
 
         this.d3_accept_point = this.d3_container.append('svg:use')
-                    .attr('class', 'SCgAcceptPoint')
+                    .attr('class', 'SCgAcceptPoint hidden')
                     .attr('xlink:href', '#acceptPoint')
                     .on('mouseover', function(d) {
                         d3.select(this).classed('SCgAcceptPointHighlighted', true);

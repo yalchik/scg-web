@@ -45,7 +45,7 @@ SCsViewer.prototype = {
         this.sandbox.eventApplyTranslation = $.proxy(this.updateTranslation, this);
         
         this.viewer = new SCs.Viewer();
-        this.viewer.init(sandbox.container, $.proxy(sandbox.getKeynode, sandbox));
+        this.viewer.init(sandbox, $.proxy(sandbox.getKeynode, sandbox));
         
         this.sandbox.updateContent();
     },
