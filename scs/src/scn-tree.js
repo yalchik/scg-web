@@ -9,6 +9,7 @@ SCs.SCnTree.prototype = {
         this.addrs = [];    // array of sc-addrs
         this.links = [];
         this.triples = [];
+        this.usedLinks = {};
         this.subtrees = {}; // dictionary of subtrees (contours)
         this.contourAddr = contourAddr;    // sc-addr of contour, that structure build with this tree
     },
@@ -95,6 +96,8 @@ SCs.SCnTree.prototype = {
         }
         
         for (idx in delKeys) {
+            var st = subtrees[delKeys[idx]];
+            this.triples = this.triples.concat(st);
             delete subtrees[delKeys[idx]];
         }
         
@@ -220,7 +223,7 @@ SCs.SCnTree.prototype = {
                         backward = true;
                     }
                     
-                    if (found) {
+                    if (found && !this.usedLinks[el.addr]) {
                         var nd = new SCs.SCnTreeNode();
             
                         nd.type = SCs.SCnTreeNodeType.Sentence;
@@ -230,6 +233,10 @@ SCs.SCnTree.prototype = {
                         nd.parent = node;
                         nd.backward = backward;
                         tpl.scn = { treeNode: nd };
+
+                        if (el.type & sc_type_link) {
+                            this.usedLinks[el.addr] = el;
+                        }
                         
                         node.childs.push(nd);
                         nd.triple = tpl;
