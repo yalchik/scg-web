@@ -46,7 +46,7 @@ SCs.SCnOutput.prototype = {
         }
 
         if (treeNode.type == SCs.SCnTreeNodeType.Keyword) {
-            output = '<div class="scs-scn-field"><div class="scs-scn-keyword">' + this.treeNodeElementHtml(treeNode, true) + '</div>';
+            output = '<div class="scs-scn-field scs-scn-field-root"><div class="scs-scn-keyword">' + this.treeNodeElementHtml(treeNode, true) + '</div>';
 
             if (treeNode.element.type & sc_type_link) {
                 output += '<div class="scs-scn-element scs-scn-field"><div class="scs-scn-field-marker scs-scn-element">=</div>'
@@ -101,10 +101,9 @@ SCs.SCnOutput.prototype = {
                 var contourTree = this.tree.subtrees[treeNode.element.addr];
                 if (contourTree) {
                     output += '<div class="scs-scn-element sc-contour scs-scn-field scs-scn-highlighted" sc_addr="' + treeNode.element.addr + '">'
-                            + this.subtreeToHtml(contourTree);
+                            + this.subtreeToHtml(contourTree) + '</div>';
                 } else {
                     output += this.treeNodeElementHtml(treeNode);
-                    
                 }
                 output += childsToHtml();
             } else {
@@ -116,7 +115,9 @@ SCs.SCnOutput.prototype = {
                 output += '}';
                 output += childsToHtml();
             }
-            output += '</div></div>';
+            if (!treeNode.mergePrev)
+                output += '</div>';
+            output += '</div>';
         }
 
         

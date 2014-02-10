@@ -19,8 +19,10 @@ SCs.Viewer.prototype = {
     /*! Append new scs-data to visualize
      */
     appendData: function(data) {
-        this.tree.build(data.keywords, data.triples);
-        $(this.containerId).html($(this.containerId).html() + this.output.toHtml());
+        var self = this;
+        $.when(this.tree.build(data.keywords, data.triples)).done(function() {
+            $(self.containerId).html($(self.containerId).html() + self.output.toHtml());
+        });
     },
 
     getAddrs: function() {
