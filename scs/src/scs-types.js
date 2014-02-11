@@ -41,9 +41,7 @@ SCs.TripleUtils.prototype = {
                     for (l2 in list2) {
                         var edge2 = list2[l2];
                         if (this._compareType(type4, this._getType(edge2.edge)) && (edge2.src == addr5)) {
-                            if (!res) {
-                                res = [];
-                            }
+                            if (!res) res = [];
                             res.push([
                                 { addr: addr1, type: this._getType(addr1) },
                                 { addr: edge.edge, type: this._getType(edge.edge) },
@@ -56,6 +54,54 @@ SCs.TripleUtils.prototype = {
                 }
             }
         }
+        return res;
+    },
+
+    find5_f_a_f_a_f: function(addr1, type2, addr3, type4, addr5) {
+        var list = this.inputEdges[addr3];
+        if (!list) return null;
+
+        var res = null;
+        for (l in list) {
+            var edge = list[l];
+            if (this._compareType(type2, this._getType(edge.edge)) && (addr1 === edge.src)) {
+                var list2 = this.inputEdges[addr5];
+                if (!list2) continue;
+
+                for (l2 in list2) {
+                    var edge2 = list2[l2];
+                    if (this._compareType(type4, this._getType(edge2.edge)) && (addr3 === edge.src)) {
+                        if (!res) res = [];
+                        res.push([
+                            { addr: addr1, type: this._getType(addr1) },
+                            { addr: edge.edge, type: this._getType(edge.edge) },
+                            { addr: addr3, type: this._getType(addr3) },
+                            { addr: edge2.edge, type: this._getType(edge2.edge) },
+                            { addr: addr5, type: this._getType(addr5) }
+                        ]);
+                    }
+                }
+            }
+        }
+    },
+
+    find3_f_a_f: function(addr1, type2, addr3) {
+        var list = this.inputEdges[addr3];
+        if (!list) return null;
+
+        var res = null;
+        for (l in list) {
+            var edge = list[l];
+            if (this._compareType(type2, edge.edge) && (addr1 === edge.src)) {
+                if (!res) res = [];
+                res.push([
+                    { addr: addr1, type: this._getType(addr1) },
+                    { addr: edge.edge, type: this._getType(edge.edge) },
+                    { addr: addr3, type: this._getType(addr3) }
+                ]);
+            }
+        }
+
         return res;
     },
 

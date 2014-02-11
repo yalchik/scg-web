@@ -5,7 +5,7 @@ SCsComponent = {
         return new SCsViewer(sandbox);
     },
     getRequestKeynodes: function() {
-        var keynodes = ['nrel_section_base_order', 'rrel_key_sc_element'];
+        var keynodes = ['nrel_section_base_order', 'rrel_key_sc_element', 'nrel_key_sc_element_base_order'];
         return keynodes.concat(SCs.SCnSortOrder);
     }
 };
