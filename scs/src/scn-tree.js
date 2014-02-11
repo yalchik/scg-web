@@ -184,8 +184,6 @@ SCs.SCnTree.prototype = {
      * @param {Array} triples Array of triples
      */
     build: function(keywords, triples) {
-        
-        var dfd = new jQuery.Deferred();
 
         var queue = [];
         this.triples = this.triples.concat(triples);
@@ -212,16 +210,22 @@ SCs.SCnTree.prototype = {
                 this.triples_process.push(tpl); 
         }
         this.buildLevels(queue, this.triples_process);
-
-        dfd.resolve();
-        return dfd.promise();
     },
     
     buildLevels: function(queue, triples) {
     
         while (queue.length > 0) {
             var node = queue.shift();
+
+            // stop tree building after input sc_type_arc_pos_const_perm to sc_type_link
+            if (node.parent 
+                && (node.parent.element.type & sc_type_link) 
+                && (node.predicate.type & sc_type_arc_pos_const_perm)
+                && node.backward) {
+                continue;
+            }
             
+
             // try to find triple that can be added as child to tree node
             var idx = 0;
             while (idx < triples.length) {

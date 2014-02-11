@@ -76,7 +76,7 @@ SCsViewer.prototype = {
                     $(element).text(namesMap[addr]);
                 } else {
                     
-                        $(element).html('<b>ⵔ</b>');
+                        $(element).html('<b>...</b>');
                 }
             }
         });
