@@ -1,12 +1,13 @@
 SCg.Tree = function() {
+    this.triples = [];
+    this.root = new SCg.TreeNode();
 };
 
 SCg.Tree.prototype = {
     constructor: SCg.Tree,
 
     init: function() {
-        this.triples = [];
-        this.root = new SCg.TreeNode();
+        
     },
 
     build: function(triples) {
