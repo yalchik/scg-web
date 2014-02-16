@@ -7,6 +7,7 @@ echo "Select component to build"
 echo "1) scg"
 echo "2) scs"
 echo "3) html"
+echo "4) github"
 echo "---"
 
 read component
@@ -17,6 +18,7 @@ case $component in
 	'1') build_file='scg/build.json';;
         '2') build_file='scs/build.json';;
 	'3') build_file='html/build.json';;
+	'4') build_file='github/build.json';;
         *)   echo "You have selected unknown component to build";;
 esac
 

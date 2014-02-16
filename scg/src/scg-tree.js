@@ -6,10 +6,6 @@ SCg.Tree = function() {
 SCg.Tree.prototype = {
     constructor: SCg.Tree,
 
-    init: function() {
-        
-    },
-
     build: function(triples) {
         
         this.triples = [];

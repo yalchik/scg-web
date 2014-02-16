@@ -31,8 +31,7 @@ SCs.SCnTree.prototype = {
         var subtrees = {};
         var idx = 0;
 
-        var tu = new SCs.TripleUtils();
-        tu.init();
+        var tu = new TripleUtils();
 
         for (t in this.triples)
             tu.appendTriple(this.triples[t]);
