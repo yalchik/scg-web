@@ -246,6 +246,8 @@ SCs.SCnTree.prototype = {
             
             this.nodes.push(node);
             queue.push(node);
+
+            this._appendAddr(keywords[i]);
         }
         
         this.determineSubTrees();
