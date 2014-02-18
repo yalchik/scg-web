@@ -62,11 +62,13 @@ var HtmlViewer = function(sandbox) {
                 }
             }
             
-            
             $.when(this.sandbox.createViewersForScLinks(sc_links)).done(
                 function() {
                     dfd.resolve();
                 });
+                
+            $(this.container + ' a:not(.sc-element)').attr('target', '_blank');
+                
             //dfd.resolve();
         }, this));
 
