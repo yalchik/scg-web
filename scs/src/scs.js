@@ -3,11 +3,14 @@ var SCs = SCs || { version: "0.1.0" };
 SCs.Connectors = {};
 SCs.SCnConnectors = {};
 SCs.SCnSortOrder = [,
+				'nrel_section_base_order',
                 'nrel_main_idtf',
                 'nrel_system_identifier',
                 'nrel_idtf',
-                'nrel_section_base_order',
-                'nrel_section_decomposition'
+				'nrel_section_decomposition',
+				'rrel_key_sc_element',
+				'nrel_logo',
+				'nrel_location'                
                 ];
 
 SCs.SCnBallMarker = '●';
