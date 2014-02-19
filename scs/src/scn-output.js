@@ -197,6 +197,9 @@ SCs.SCnOutput.prototype = {
 						v = SCs.SCnSortOrder.length;
 					}
 					if (attrs[i].n.type & sc_type_node_role) {
+						if (v === null) {
+							v = 0;
+						}
 						v += 10;
 					}
                     if (!res || (v && v < res)) {
@@ -206,6 +209,14 @@ SCs.SCnOutput.prototype = {
                 return (res === null) ? ((attrs.length > 0) ? (SCs.SCnSortOrder.length + 1) : null) : (res + 1);
             }
             
+            function joinAttrs(attrs) {
+				var res = '';
+				for (a in attrs) {
+					res += attrs[a].n.addr;
+				}
+				return res;
+			}
+            
             if (a.parent && b.parent) {
                 if (a.parent != b.parent) throw "Not equal parents";
                 if (a.parent.isSet) {
@@ -213,7 +224,7 @@ SCs.SCnOutput.prototype = {
                     var oB = a.parent.setOrder[b.element.addr];
 
                     if (oA && oB) {
-                        return oA - oB;
+						return oA - oB;
                     } else {
                         if (!oA && oB) {
 							return 1;
@@ -231,7 +242,12 @@ SCs.SCnOutput.prototype = {
             var orderB = minOrderAttr(b.attrs);
             
             if (orderA && orderB) {
-                return orderA - orderB;
+                var d = orderA - orderB;
+                if (d !== 0) {
+					return d;
+				}
+				
+				return joinAttrs(a.attrs) < joinAttrs(b.attrs);
             } else {
                 if (!orderA && orderB) {
 					return 1;
@@ -245,7 +261,7 @@ SCs.SCnOutput.prototype = {
             // order by subject node addrs
             // order by arc type
             
-            return 0;
+            return a.element.addr < b.element.addr;
         }
 
         while (queue.length > 0) {
