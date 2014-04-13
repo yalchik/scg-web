@@ -583,6 +583,31 @@ SCg.ModelContour.prototype.isNodeInPolygon = function (node) {
 };
 
 /**
+ * if at least one vertex of the contour is out of the polygon,
+ * we consider that contour is out of the polygon
+ * @param contour
+ * @return {boolean}
+ */
+SCg.ModelContour.prototype.isContourInPolygon = function (contour) {
+    for (var i = 0; i < contour.points.length; i++) {
+        if (!SCg.Algorithms.isPointInPolygon(contour.points[i], this.points)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+SCg.ModelContour.prototype.isInPolygon = function (modelObject) {
+    if (modelObject instanceof SCg.ModelNode) {
+        return this.isNodeInPolygon(modelObject);
+    }
+    else if (modelObject instanceof SCg.ModelContour) {
+        return this.isContourInPolygon(modelObject);
+    }
+    return false;
+};
+
+/**
  * Convenient function for testing, which does mass checking nodes is in the contour
  * and adds them to childs of the contour
  * @param nodes array of {SCg.ModelNode}

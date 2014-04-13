@@ -496,14 +496,14 @@ SCg.Scene.prototype = {
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             // case we moved object from contour
-            if (obj.contour && !obj.contour.isNodeInPolygon(obj)) {
+            if (obj.contour && !obj.contour.isInPolygon(obj)) {
                 obj.contour.removeChild(obj);
             }
 
             // case we moved object into the contour
-            if (!obj.contour && obj instanceof SCg.ModelNode) {
+            if (!obj.contour) {
                 for (var i = 0; i < this.contours.length; i++) {
-                    if (this.contours[i].isNodeInPolygon(obj)) {
+                    if (this.contours[i].isInPolygon(obj)) {
                         this.contours[i].addChild(obj);
                     }
                 }
