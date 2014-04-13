@@ -66,6 +66,8 @@ SCg.Scene = function(options) {
      * in that moment shows modal dialog
      */
     this.modal = SCgModalMode.SCgModalNone;
+
+    this.SPACE_FOR_SCROLLING = 200;
 };
 
 SCg.Scene.prototype = {
@@ -355,7 +357,7 @@ SCg.Scene.prototype = {
     
     // -------- input processing -----------
     onMouseMove: function(x, y) {
-        
+
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         var offset = new SCg.Vector3(x - this.mouse_pos.x, y - this.mouse_pos.y, 0);
@@ -367,7 +369,15 @@ SCg.Scene.prototype = {
             if (this.focused_object.sc_type & sc_type_node) {
                 this.focused_object.setPosition(this.focused_object.position.clone().add(offset));
             }
-            
+
+            var workspace = d3.select('#' + this.render.containerId + " svg");
+            if (x + this.SPACE_FOR_SCROLLING > workspace.attr('width')) {
+                workspace.attr('width', x + this.SPACE_FOR_SCROLLING);
+            }
+            if (y + this.SPACE_FOR_SCROLLING > workspace.attr('height')) {
+                workspace.attr('height', y + this.SPACE_FOR_SCROLLING);
+            }
+
             this.updateObjectsVisual();
             this.render.updateLinePoints();
         }

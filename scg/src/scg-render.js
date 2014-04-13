@@ -2,14 +2,23 @@
 
 SCg.Render = function() {
     this.scene = null;
+
+    // to have scrolling bars not displayed at the start of the application
+    // we make it a little less than scgViewer
+    this.DRAWER_VIEWPORT_OFFSET = 20;
 };
 
 SCg.Render.prototype = {
 
     init: function(params) {
         this.containerId = params.containerId;
-        this.d3_drawer = d3.select('#' + this.containerId).append("svg:svg").attr("pointer-events", "all").attr("width", '100%').attr("height", '100%');
-        
+        var scgViewer = $('#scg-viewer');
+        this.d3_drawer = d3.select('#' + this.containerId)
+            .append("svg:svg")
+            .attr("pointer-events", "all")
+            .attr("width", scgViewer.width() - this.DRAWER_VIEWPORT_OFFSET)
+            .attr("height", scgViewer.height() - this.DRAWER_VIEWPORT_OFFSET);
+
         d3.select('#' + this.containerId);//.attr('style', 'display: block');
         
         var self = this;
@@ -42,7 +51,7 @@ SCg.Render.prototype = {
                         .style("fill", "url(#backGrad)")
                         .attr('width', '100%') //parseInt(this.d3_drawer.style("width")))
                         .attr('height', '100%');//parseInt(this.d3_drawer.style("height")));
-                        
+
                         
         this.d3_drag_line = this.d3_container.append('svg:path')
                 .attr('class', 'dragline hidden')
