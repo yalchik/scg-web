@@ -12,7 +12,7 @@ echo "---"
 
 read component
 
-target='../sc-web/sc_web/sc_web/static/components/'
+target='../sc-web/static/components/'
 rel_source_file='static/components/'
 source_path=''
 
