@@ -71,8 +71,8 @@ SCg.Scene = function(options) {
      * in that moment shows modal dialog
      */
     this.modal = SCgModalMode.SCgModalNone;
-	
-	// for drag scrolling
+
+    // for drag scrolling
     this.previousMouseMovePoint = null;
 };
 
@@ -361,7 +361,7 @@ SCg.Scene.prototype = {
         this.updateObjectsVisual();
     },
     
-	isCursorOverWorkspace: function(x, y) {
+    isCursorOverWorkspace: function(x, y) {
         var scgViewer = $('#scg-viewer');
         var svg = $('#scg-viewer svg');
         var WORKSPACE_OFFSET = 30;
@@ -389,20 +389,20 @@ SCg.Scene.prototype = {
 
         this.previousMouseMovePoint = newPosition;
     },
-	
+
     // -------- input processing -----------
     onMouseMove: function(x, y) {
         
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
-		if (!this.isCursorOverWorkspace(x, y)) {
+        if (!this.isCursorOverWorkspace(x, y)) {
             // disable drag scrolling
             this.previousMouseMovePoint = null;
         }
         else if (this.previousMouseMovePoint && !this.focused_object) {
             this.scrollTo(x, y);    // execute drag scrolling
         }
-		
+
         var offset = new SCg.Vector3(x - this.mouse_pos.x, y - this.mouse_pos.y, 0);
 
         this.mouse_pos.x = x;
@@ -413,7 +413,7 @@ SCg.Scene.prototype = {
                 this.focused_object.setPosition(this.focused_object.position.clone().add(offset));
             }
             
-			// extend workspace
+            // extend workspace
             var SPACE_FOR_SCROLLING = 200;
             var workspace = d3.select('#' + this.render.containerId + " svg");
             if (x + SPACE_FOR_SCROLLING > workspace.attr('width')) {
@@ -422,7 +422,7 @@ SCg.Scene.prototype = {
             if (y + SPACE_FOR_SCROLLING > workspace.attr('height')) {
                 workspace.attr('height', y + SPACE_FOR_SCROLLING);
             }
-			
+            
             this.updateObjectsVisual();
             this.render.updateLinePoints();
         }
@@ -445,7 +445,7 @@ SCg.Scene.prototype = {
             if (isModeContour || (isModeEdge && this.edge_data.source)) {
                 this.drag_line_points.push({x: x, y: y, idx: this.drag_line_points.length});
             }
-			else if (isModeSelect) {
+            else if (isModeSelect) {
                 // enable drag scrolling
                 this.previousMouseMovePoint = new SCg.Vector2(x, y);
             }
@@ -459,8 +459,8 @@ SCg.Scene.prototype = {
     
     onMouseUp: function(x, y) {
         
-		this.previousMouseMovePoint = null; // disable drag scrolling
-		
+        this.previousMouseMovePoint = null; // disable drag scrolling
+        
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (!this.pointed_object)

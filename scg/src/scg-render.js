@@ -8,12 +8,12 @@ SCg.Render.prototype = {
 
     init: function(params) {
         this.containerId = params.containerId;
-		
-		// to have scrolling bars not displayed at the start of the application
-		// we make it a little less than scgViewer
-		var DRAWER_VIEWPORT_OFFSET = 20;
         
-		var scgViewer = $('#scg-viewer');
+        // to have scrolling bars not displayed at the start of the application
+        // we make it a little less than scgViewer
+        var DRAWER_VIEWPORT_OFFSET = 20;
+        
+        var scgViewer = $('#scg-viewer');
         this.d3_drawer = d3.select('#' + this.containerId)
             .append("svg:svg")
             .attr("pointer-events", "all")
