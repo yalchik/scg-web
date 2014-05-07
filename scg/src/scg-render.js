@@ -203,6 +203,9 @@ SCg.Render.prototype = {
         this.d3_contours = this.d3_contours.data(this.scene.contours, function(d) { return d.id; });
 
         g = this.d3_contours.enter().append('svg:polygon')
+            .attr('id', function(d) {
+                return "SCgContour" + d.id;
+            })
             .attr('class', 'SCgContour')
             .attr('points', function(d) {
                 var verticiesString = "";

@@ -517,22 +517,18 @@ SCg.ModelContour = function(options) {
     
     SCg.ModelObject.call(this, options);
 
-    this.childs = [];
+    this.childs = options.childs ? options.childs : [];
     this.points = options.verticies ? options.verticies : [];
     this.sc_type = options.sc_type ? options.sc_type : sc_type_node_struct | sc_type_node;
     this.previousPoint = null;
 
-    var cx = 0;
-    var cy = 0;
-    for (var i = 0; i < this.points.length; i++) {
-        cx += this.points[i].x;
-        cy += this.points[i].y;
-    }
+    var centerPoint = this.calculateCenter();
+    this.position.x = centerPoint.x;
+    this.position.y = centerPoint.y;
 
-    cx /= this.points.length;
-    cy /= this.points.length;
-    this.position.x = cx;
-    this.position.y = cy;
+    if (this.childs.length > 0) {
+        this.recalculateVertexes();
+    }
 };
 
 SCg.ModelContour.prototype = Object.create( SCg.ModelObject.prototype );
@@ -564,6 +560,12 @@ SCg.ModelContour.prototype.update = function() {
  * @param {SCg.ModelObject} child Child object to append
  */
 SCg.ModelContour.prototype.addChild = function(child) {
+    if (this.childs.indexOf(child) != -1) {
+        return;
+    }
+    if (child.contour) {
+        child.contour.removeChild(child);
+    }
     this.childs.push(child);
     child.contour = this;
 };
@@ -574,8 +576,10 @@ SCg.ModelContour.prototype.addChild = function(child) {
  */
 SCg.ModelContour.prototype.removeChild = function(child) {
     var idx = this.childs.indexOf(child);
-    this.childs.splice(idx, 1);
-    child.contour = null;
+    if (idx > -1) {
+        this.childs.splice(idx, 1);
+        child.contour = null;
+    }
 };
 
 SCg.ModelContour.prototype.isNodeInPolygon = function (node) {
@@ -583,14 +587,52 @@ SCg.ModelContour.prototype.isNodeInPolygon = function (node) {
 };
 
 /**
- * Convenient function for testing, which does mass checking nodes is in the contour
- * and adds them to childs of the contour
+ * if at least one vertex of the contour is out of the polygon,
+ * we consider that contour is out of the polygon
+ * @param contour
+ * @return {boolean}
+ */
+SCg.ModelContour.prototype.isContourInPolygon = function (contour) {
+    for (var i = 0; i < contour.points.length; i++) {
+        if (!SCg.Algorithms.isPointInPolygon(contour.points[i], this.points)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+SCg.ModelContour.prototype.isInPolygon = function (modelObject) {
+    if (modelObject instanceof SCg.ModelNode) {
+        return this.isNodeInPolygon(modelObject);
+    }
+    else if (modelObject instanceof SCg.ModelContour) {
+        return this.isContourInPolygon(modelObject);
+    }
+    return false;
+};
+
+/**
+ * This function adds all objects, which are in polygon, but not in the contour yet
  * @param nodes array of {SCg.ModelNode}
  */
-SCg.ModelContour.prototype.addNodesWhichAreInContourPolygon = function (nodes) {
-    for (var i = 0; i < nodes.length; i++) {
-        if (!nodes[i].contour && this.isNodeInPolygon(nodes[i])) {
-            this.addChild(nodes[i]);
+SCg.ModelContour.prototype.addObjectsWhichAreInContour = function (objects) {
+    var self = this;
+
+    // if input object is in some contour, which is in our contour's polygon too,
+    // then add that contour, but not the input object
+    var addContourChild = function (contour) {
+        if (contour.contour && self.isInPolygon(contour.contour)) {
+            addContourChild(contour.contour)
+        }
+        else {
+            self.addChild(contour);
+        }
+    };
+
+    for (var i = 0; i < objects.length; i++) {
+        var scgObject = objects[i];
+        if (this.isInPolygon(scgObject)) {
+            addContourChild(scgObject);
         }
     }
 };
@@ -607,6 +649,62 @@ SCg.ModelContour.prototype.getConnectionPos = function (from, dotPos) {
         }
     }
     return nearestIntersectionPoint;
+};
+
+/**
+ * Calculate center point coordinates from the coordinates of the contour's vertexes.
+ * @return {SCg.Vector2}
+ */
+SCg.ModelContour.prototype.calculateCenter = function () {
+    var cx = 0;
+    var cy = 0;
+    for (var i = 0; i < this.points.length; i++) {
+        cx += this.points[i].x;
+        cy += this.points[i].y;
+    }
+
+    cx /= this.points.length;
+    cy /= this.points.length;
+    return new SCg.Vector2(cx, cy);
+};
+
+/**
+ * Recalculate vertexes, using its children's coordinates.
+ * After that the contour will be set by convex polygon, taking the minimum space.
+ */
+SCg.ModelContour.prototype.recalculateVertexes = function () {
+    var RECALCULATING_OFFSET = 25;
+
+    if (this.childs.length == 0) {
+        return;
+    }
+
+    var allPoints = $.map(this.childs, function (child) {
+        if (child instanceof SCg.ModelNode) {
+            return [
+                [child.position.x + RECALCULATING_OFFSET, child.position.y + RECALCULATING_OFFSET],
+                [child.position.x - RECALCULATING_OFFSET, child.position.y + RECALCULATING_OFFSET],
+                [child.position.x - RECALCULATING_OFFSET, child.position.y - RECALCULATING_OFFSET],
+                [child.position.x + RECALCULATING_OFFSET, child.position.y - RECALCULATING_OFFSET]
+            ];
+        }
+        else if (child instanceof SCg.ModelContour) {
+            return $.map(child.points, function (point) {
+                return [
+                    [point.x + RECALCULATING_OFFSET, point.y + RECALCULATING_OFFSET],
+                    [point.x - RECALCULATING_OFFSET, point.y + RECALCULATING_OFFSET],
+                    [point.x - RECALCULATING_OFFSET, point.y - RECALCULATING_OFFSET],
+                    [point.x + RECALCULATING_OFFSET, point.y - RECALCULATING_OFFSET]
+                ];
+            });
+        }
+    });
+
+    this.points = $.map(d3.geom.hull(allPoints), function (pos) {
+        return new SCg.Vector2(pos[0], pos[1]);
+    });
+
+    SCg.ModelObject.prototype.setPosition.call(this, this.calculateCenter());
 };
 
 SCg.ModelBus = function(options) {

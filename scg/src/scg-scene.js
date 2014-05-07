@@ -104,7 +104,7 @@ SCg.Scene.prototype = {
      * @param {SCg.ModelContour} contour Contour to append
      */
     appendContour: function(contour) {
-        this.contours.push(contour);
+        this.contours.unshift(contour);
         contour.scene = this;
         if (contour.sc_addr)
             this.objects[contour.sc_addr] = contour;
@@ -367,7 +367,7 @@ SCg.Scene.prototype = {
             if (this.focused_object.sc_type & sc_type_node) {
                 this.focused_object.setPosition(this.focused_object.position.clone().add(offset));
             }
-            
+
             this.updateObjectsVisual();
             this.render.updateLinePoints();
         }
@@ -480,22 +480,25 @@ SCg.Scene.prototype = {
             }
         }
     },
-    
+
     onMouseUpObject: function(obj) {
         if (this.modal != SCgModalMode.SCgModalNone) return; // do nothing
         
         if (this.edit_mode == SCgEditMode.SCgModeSelect) {
             // case we moved object from contour
-            if (obj.contour && !obj.contour.isNodeInPolygon(obj)) {
-                obj.contour.removeChild(obj);
+            if (this.focused_object
+                && this.focused_object.contour
+                && !this.focused_object.contour.isInPolygon(this.focused_object)
+                ) {
+                this.focused_object.contour.removeChild(this.focused_object);
             }
 
             // case we moved object into the contour
-            if (!obj.contour && obj instanceof SCg.ModelNode) {
-                for (var i = 0; i < this.contours.length; i++) {
-                    if (this.contours[i].isNodeInPolygon(obj)) {
-                        this.contours[i].addChild(obj);
-                    }
+            for (var i = 0; i < this.contours.length; i++) {
+                if (this.contours[i].isInPolygon(this.focused_object)) {
+                    this.contours[i].addChild(this.focused_object);
+                    this.doContourLayout(this.contours[i]);
+                    break;
                 }
             }
 
@@ -520,6 +523,10 @@ SCg.Scene.prototype = {
                 this.resetEdgeMode();
                 return true;
             }
+        }
+        else if (key_code == KeyCode.Enter && this.focused_object && this.focused_object instanceof SCg.ModelContour) {
+            this.focused_object.recalculateVertexes();
+            this.updateRender();
         }
         
         return false;
@@ -657,12 +664,36 @@ SCg.Scene.prototype = {
             verticies: polygon
         });
 
-        contour.addNodesWhichAreInContourPolygon(this.nodes);
+        contour.addObjectsWhichAreInContour(this.contours);
+        contour.addObjectsWhichAreInContour(this.nodes);
+
         this.appendContour(contour);
         this.pointed_object = contour;
         this.drag_line_points.splice(0, this.drag_line_points.length);
         this.updateRender();
         this.render.updateDragLine();
+        this.doContourLayout(contour);
+    },
+
+    doContourLayout: function(contour) {
+        var thisDOMElement = $("#SCgContour" + contour.id);
+        for (var i = 0; i < contour.childs.length; i++) {
+            var child = contour.childs[i];
+            if (child instanceof SCg.ModelContour) {
+                // swap contours in DOM
+                var childDOMElement = $("#SCgContour" + child.id);
+                thisDOMElement.after(childDOMElement);
+
+                // swap contours in the contours array
+                var thisSceneContourId = this.contours.indexOf(contour);
+                var childSceneContourId = this.contours.indexOf(child);
+                this.contours[thisSceneContourId] = child;
+                this.contours[childSceneContourId] = contour;
+
+                // do layout recursively for all child contours
+                this.doContourLayout(child);
+            }
+        }
     },
 
     // ------------- events -------------
