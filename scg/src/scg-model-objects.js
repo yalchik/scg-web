@@ -669,6 +669,29 @@ SCg.ModelContour.prototype.calculateCenter = function () {
 };
 
 /**
+ * If we have object, which can belong to several contours,
+ * and one of these contours is inner for another.
+ * In this case we need to get the top one
+ * @param scgObject
+ * @return top contour, which can contain scgObject, or null if object is out of any contours
+ */
+SCg.ModelContour.prototype.getTopContourFor = function(scgObject) {
+    if (scgObject != this && this.isInPolygon(scgObject)) {
+        for (var i = 0; i < this.childs.length; i++) {
+            var child = this.childs[i];
+            if (child instanceof SCg.ModelContour) {
+                var topContour = child.getTopContourFor(scgObject);
+                if (topContour) {
+                    return topContour;
+                }
+            }
+        }
+        return this;
+    }
+    return null;
+};
+
+/**
  * Recalculate vertexes, using its children's coordinates.
  * After that the contour will be set by convex polygon, taking the minimum space.
  */

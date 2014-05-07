@@ -495,9 +495,10 @@ SCg.Scene.prototype = {
 
             // case we moved object into the contour
             for (var i = 0; i < this.contours.length; i++) {
-                if (this.contours[i].isInPolygon(this.focused_object)) {
-                    this.contours[i].addChild(this.focused_object);
-                    this.doContourLayout(this.contours[i]);
+                var topContour = this.contours[i].getTopContourFor(this.focused_object);
+                if (topContour) {
+                    topContour.addChild(this.focused_object);
+                    this.doContourLayout(topContour);
                     break;
                 }
             }
@@ -683,12 +684,6 @@ SCg.Scene.prototype = {
                 // swap contours in DOM
                 var childDOMElement = $("#SCgContour" + child.id);
                 thisDOMElement.after(childDOMElement);
-
-                // swap contours in the contours array
-                var thisSceneContourId = this.contours.indexOf(contour);
-                var childSceneContourId = this.contours.indexOf(child);
-                this.contours[thisSceneContourId] = child;
-                this.contours[childSceneContourId] = contour;
 
                 // do layout recursively for all child contours
                 this.doContourLayout(child);
